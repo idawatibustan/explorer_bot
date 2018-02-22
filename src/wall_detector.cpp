@@ -132,8 +132,6 @@ class WallDetector{
               }
               wall_state.data = wall;
             }
-            std::string wall ("0");
-            wall_state.data = wall;
 
             wall_pub.publish(wall_state);
             std::cout << std::setprecision(2) << std::fixed;
