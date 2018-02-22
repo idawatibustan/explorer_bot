@@ -1,4 +1,5 @@
 #include <ros/ros.h>
+#include <std_msgs/String.h>
 #include <sensor_msgs/LaserScan.h>
 
 #include <iostream>
@@ -8,12 +9,15 @@
 class WallDetector{
     private:
         ros::Subscriber scan_sub;
+        ros::Publisher wall_pub;
 
     public:
         WallDetector(ros::NodeHandle &nh){
             scan_sub = nh.subscribe("/scan",1,&WallDetector::callback, this);
+            wall_pub = nh.advertise<std_msgs::String>("/wall_scan",1);
         }
         void callback( const sensor_msgs::LaserScanConstPtr& scanMsg){
+            std_msgs::String wall_state;
             bool front_0 = false;
             bool left_1 = false;
             bool front_1 = false;
@@ -103,19 +107,36 @@ class WallDetector{
             if( fl < 0.7 && fr < 0.7 )
             {
               front_0 = true;
+              wall_state.data = "1000";
             }
             else
             {
-              if ( l5 < 1.5 && l4 < 1.5 && l5 < l4 )
+              std::string wall ("0");
+              if ( l5 < 1.5 && l4 < 1.5 && l5 < l4 ) {
                 left_1 = true;
-              if ( fl < 1.6 && fr < 1.6)
+                wall += "1";
+              } else {
+                wall += "0";
+              }
+              if ( fl < 1.6 && fr < 1.6) {
                 front_1 = true;
-              if ( r5 < 1.5 && r4 < 1.5 && r5 < r4 )
+                wall += "1";
+              } else {
+                wall += "0";
+              }
+              if ( r5 < 1.5 && r4 < 1.5 && r5 < r4 ) {
                 right_1 = true;
+                wall += "1";
+              } else {
+                wall += "0";
+              }
+              wall_state.data = wall;
             }
+            std::string wall ("0");
+            wall_state.data = wall;
 
-
-            std::cout<< std::setprecision(2) << std::fixed;
+            wall_pub.publish(wall_state);
+            std::cout << std::setprecision(2) << std::fixed;
             std::cout << j
                       << " e:" << r5
                       << " d:" << r4
