@@ -136,6 +136,9 @@ include_directories(
 add_executable(wall_detector src/wall_detector.cpp)
 target_link_libraries(wall_detector ${catkin_LIBRARIES})
 
+add_executable(explorer src/explorer.cpp)
+target_link_libraries(explorer ${catkin_LIBRARIES})
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
