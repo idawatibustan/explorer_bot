@@ -136,6 +136,9 @@ include_directories(
 add_executable(wall_detector src/wall_detector.cpp)
 target_link_libraries(wall_detector ${catkin_LIBRARIES})
 
+add_executable(bot_navigator src/bot_navigator.cpp)
+target_link_libraries(bot_navigator ${catkin_LIBRARIES})
+
 add_executable(explorer src/explorer.cpp)
 target_link_libraries(explorer ${catkin_LIBRARIES})
 
