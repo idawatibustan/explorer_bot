@@ -15,6 +15,7 @@ class BotNavigator{
         ros::Publisher vel_pub;
         ros::ServiceServer move_x;
         ros::ServiceServer move_y;
+        bool init_flag;
         double trans_x, trans_z;
         double pos_x, pos_y, ori_z, ang_z;
         double ang_n, ang_e, ang_s, ang_w;
@@ -23,6 +24,7 @@ class BotNavigator{
 
     public:
         BotNavigator(ros::NodeHandle &nh){
+            init_flag = true;
             trans_x = 0;
             trans_z = 0;
             pos_sub = nh.subscribe("/odom",1,&BotNavigator::callback, this);
@@ -33,12 +35,14 @@ class BotNavigator{
 
         bool move_x_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
         {
+            ROS_INFO("requested move_x");
             target_x += 1.0;
             return true;
         }
 
         bool move_y_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
         {
+            ROS_INFO("requested move_y");
             target_y += 1.0;
             return true;
         }
@@ -56,8 +60,12 @@ class BotNavigator{
             // TODO : south direction
             // TODO : west direction
 
-            target_x = pos_x;
-            target_o = ang_z;
+            if (init_flag) {
+                target_x = pos_x;
+                target_y = pos_y;
+                target_o = ang_z;
+                init_flag = false;
+            }
 
             if ( abs(target_x - pos_x) > 0.1 ) {
                 // TODO: ensure the robot is facing North
@@ -89,9 +97,9 @@ class BotNavigator{
             vel_pub.publish(base_cmd);
             std::cout<< std::setprecision(2) << std::fixed;
             std::cout << poseMsg->header.stamp
-                      << " Current:" << pos_x << "," << ori_z
-                      << " Target:" << target_x << "," << ang_z
-                      << " Move:" <<  trans_x << ", " << trans_z << std::endl;
+                      << " C:" << pos_x << "," << pos_y << "," << ori_z
+                      << " T:" << target_x << "," << target_y << "," << target_o
+                      << " M:" <<  trans_x << ", " << trans_z << std::endl;
 
         }
 };
