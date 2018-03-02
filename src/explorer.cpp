@@ -132,14 +132,10 @@ public:
   }
   void wall_callback( const std_msgs::StringConstPtr& msg ) {
     std::string res = msg->data.c_str();
-    if(res[0] == '1'){
-      wall_front = true;
-    } else {
-      wall_front = false;
-      wf_left = (res[1] == '1');
-      wf_front = (res[2] == '1');
-      wf_right = (res[3] == '1');
-    }
+    wall_front = (res[0] == '1');
+    wf_left = (res[1] == '1');
+    wf_front = (res[2] == '1');
+    wf_right = (res[3] == '1');
     std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
   bool is_goal_reached() { return goal_reached; }
