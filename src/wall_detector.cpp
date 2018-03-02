@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include <vector>
-#include <math.h>
+#include <cmath>
 
 class WallDetector{
     private:
@@ -30,77 +30,77 @@ class WallDetector{
             int j=0, count=0, n=61;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 r5 = r5 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 r4 = r4 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 r3 = r3 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 r2 = r2 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 fr = fr * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 fl = fl * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 l2 = l2 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 l3 = l3 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 l4 = l4 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<j+n; i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 l5 = l5 * count/(count+1) + ranges[i]/(count+1);
             }
             j+=n;
             count=0;
             for ( int i=j; i<ranges.size(); i++ )
             {
-              if(!isnan(ranges[i]))
+              if(!std::isnan(ranges[i]))
                 l6 = l6 * count/(count+1) + ranges[i]/(count+1);
             }
 

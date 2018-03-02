@@ -23,7 +23,7 @@ class Node
   private:
     Position p;
     double g, h, f;
-
+    bool calculated=false;
   public:
     Node(int x, int y, const Position &goal) : p(x, y) {
       this->h = this->p.getDistance(goal);
@@ -31,7 +31,15 @@ class Node
     double getPosX() { return p.getX(); }
     double getPosY() { return p.getY(); }
     double getH() { return h; }
-
+    double getF() {
+      if (calculated)
+        return g+h;
+      else
+        return 0.0;
+    }
+    double setG(double g) {
+      this->g = g;
+    }
 };
 
 class Map{
@@ -78,4 +86,7 @@ int main(int argc, char** argv)
   Map m1;
   Map m2(9, goal, start);
   m1.generateMap();
+  for (Node& n : m1.getNodes()){
+    std::cout << "n(" << n.getPosX() <<"," << n.getPosY() << ") d:" << n.getH() << std::endl;
+  }
 }
