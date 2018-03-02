@@ -9,6 +9,10 @@
 #include <cmath>
 #include <vector>
 
+class Position;
+class Node;
+class Edge;
+
 class Position{
 private:
   int x, y;
@@ -28,8 +32,10 @@ public:
 class Node
 {
 private:
+  int id;
   Position p;
   double g, h, f;
+  std::vector<Edge> edges;
   bool calculated=false;
 public:
   Node(int x, int y, const Position &goal) : p(x, y) {
@@ -50,6 +56,22 @@ public:
   double setG(double g) {
     this->g = g;
   }
+};
+
+class Edge{
+private:
+  bool checked;
+  Node node_a, node_b;
+public:
+  std::vector<Node> nodes;
+  Edge(const Node &a, const Node &b)
+  : node_a(a), node_b(b) {
+    this->checked = false;
+  }
+  Node getA() { return node_a; }
+  Node getB() { return node_b; }
+  bool get_checked() { return checked; }
+  void set_checked() { checked = true; }
 };
 
 class Map{
@@ -97,10 +119,13 @@ private:
 
   bool goal_reached = false;
   bool wall_front, wf_left, wf_front, wf_right;
+  Map map;
 
 public:
-  Explorer(ros::NodeHandle &nh){
+  Explorer(ros::NodeHandle &nh) : map() {
     goal_reached = false;
+
+    map.generateMap();
 
     goal_x = 4.0;
     goal_y = 4.0;
@@ -119,8 +144,10 @@ public:
     d_y = std::abs(pos_y - goal_y);
     if ( d_x < 0.2 && d_y < 0.2 ) {
       status.data = "goal";
+      goal_reached = true;
     } else {
       status.data = "nope";
+      goal_reached = false;
     }
 
     expl_pub.publish(status);
