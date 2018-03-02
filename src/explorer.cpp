@@ -95,10 +95,13 @@ private:
   double goal_x, goal_y;
   double d_x, d_y;
 
+  bool goal_reached = false;
   bool wall_front, wf_left, wf_front, wf_right;
 
 public:
   Explorer(ros::NodeHandle &nh){
+    goal_reached = false;
+
     goal_x = 4.0;
     goal_y = 4.0;
 
@@ -132,12 +135,14 @@ public:
     if(res[0] == '1'){
       wall_front = true;
     } else {
+      wall_front = false;
       wf_left = (res[1] == '1');
       wf_front = (res[2] == '1');
       wf_right = (res[3] == '1');
     }
     std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
+  bool is_goal_reached() { return goal_reached; }
 };
 
 int main(int argc, char** argv){
@@ -145,6 +150,13 @@ int main(int argc, char** argv){
   ros::NodeHandle nh;
   Explorer ex(nh);
 
-  ros::spin();
+  ros::Rate r(10);
+  while (ros::ok()) {
+    if (!ex.is_goal_reached())
+      ROS_INFO("trying");
+    ROS_INFO("again");
+    ros::spinOnce();
+    r.sleep();
+  }
   return 0;
 }
