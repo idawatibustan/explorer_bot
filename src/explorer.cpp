@@ -38,10 +38,12 @@ private:
   std::vector<Edge> edges;
   bool calculated=false;
 public:
-  Node(int x, int y, const Position &goal) : p(x, y) {
+  Node(int id, int x, int y, const Position &goal) : p(x, y) {
+    this->id = id;
     this->h = this->p.getDistance(goal);
   }
-  Node(const Position &p, const Position &goal) : p(p) {
+  Node(int id, const Position &p, const Position &goal) : p(p) {
+    this->id = id;
     this->h = this->p.getDistance(goal);
   }
   double getPosX() { return p.getX(); }
@@ -78,6 +80,7 @@ class Map{
 private:
   int size;
   Position goal, init, curr;
+  Graph graph;
 public:
   std::vector<Node> nodes;
   Map(int size, const Position &goal, const Position &init)
@@ -100,13 +103,65 @@ public:
     for(int i=0; i<size; i++){
       for(int j=0; j<size; j++){
         // std::cout << "n " << (i+1)*(j+1) << std::endl;
-        nodes.push_back(Node(i, j, goal));
+        int id = size*i + j;
+        nodes.push_back(Node(id, i, j, goal));
+      }
+    }
+  }
+
+  void generateGraph(){
+    this->size;
+    this->init;
+    this->goal;
+    for(int i=0; i<this->size; i++){
+      for(int j=0; j<this->size; j++){
+        // std::cout << "n " << (i+1)*(j+1) << std::endl;
+        int id = size*i + j;
+        nodes.push_back(Node(id, i, j, goal));
+        if (j > 0) {
+          graph.addEdge(id-1, id);
+        }
+        if (j < size) {
+          graph.addEdge(id, id+1);
+        }
+        if (i > 0) {
+          graph.addEdge(id-size, id);
+        }
+        if (i < size) {
+          graph.addEdge(id, id+size);
+        }
       }
     }
   }
 
   std::vector<Node> getNodes() { return nodes; };
 };
+
+class Graph{
+private:
+  std::map<int, std::vector> adj;
+  int node_count;
+  int edge_count;
+public:
+  Graph(int node_num){
+    node_count=node_num;
+    edge_count=0;
+  };
+  ~Graph();
+  void addEdge(int a, int b){
+    edge_count++;
+    adj[a].push_back(b);
+    adj[b].push_back(a);
+  }
+  bool removeEdge(int a, int b){
+    edge_count--;
+    adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
+    adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
+  }
+  std::vector getEdges(int n){
+    return adj[n]
+  }
+}
 
 class Explorer{
 private:
