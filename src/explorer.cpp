@@ -1,13 +1,13 @@
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <map>
 #include <string>
+#include <vector>
+
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <nav_msgs/Odometry.h>
-
-#include <iostream>
-#include <cmath>
-#include <vector>
 
 class Position;
 class Node;
