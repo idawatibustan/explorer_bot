@@ -57,8 +57,8 @@ private:
   int edge_count;
 public:
   Graph(int node_num){
-    node_count=node_num;
-    edge_count=0;
+    this->node_count=node_num;
+    this->edge_count=0;
   };
   bool isEdgeValid(int a, int b){
     bool isBinA = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
@@ -73,12 +73,10 @@ public:
     }
   }
   bool removeEdge(int a, int b){
+    std::cout << "removing " << a << "," << b << std::endl;
     edge_count--;
     adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
     adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
-  }
-  std::vector<int> getEdges(int n){
-    return adj[n];
   }
   void printNeighbors(int n) {
     std::cout << '[' << n << "] ";
@@ -91,7 +89,12 @@ public:
     for(int i = 0; i < node_count; i++){
       printNeighbors(i);
     }
+    std::cout << "nodes: " << node_count
+              << ", edges:" << edge_count << std::endl;
   }
+  std::vector<int> getEdges(int n) { return adj[n]; }
+  int getNodeCount() { return node_count; }
+  int getEdgeCount() { return edge_count; }
 };
 
 class Map{
@@ -99,16 +102,21 @@ private:
   int size;
   Position goal, init, curr;
   Graph graph;
+  bool is_generated;
+  std::map<int, Node*> nodes;
+  // std::pair<int, Node*> nodes_pair;
 public:
-  std::vector<Node> nodes;
+  // std::vector<Node> nodes;
   Map(int size, const Position &goal, const Position &init)
   : goal(goal), init(init), curr(init), graph(size*size) {
     this->size = size;
+    this->is_generated = false;
     print();
   }
   Map()
   : goal(1,1), init(0,0), curr(0,0), graph(9) {
     this->size = 3;
+    this->is_generated = false;
     print();
   }
   void print() {
@@ -116,23 +124,18 @@ public:
     << " Init:" << init.getX() << ", " << init.getY()
     << " Curr:" << curr.getX() << ", " << curr.getY() << std::endl;
   }
-  void generateMap() {
-    for(int i=0; i<size; i++){
-      for(int j=0; j<size; j++){
-        // std::cout << "n " << (i+1)*(j+1) << std::endl;
-        int id = size*i + j;
-        nodes.push_back(Node(id, i, j, goal));
-      }
-    }
-  }
-
   void generateGraph(){
+    if (this->is_generated){
+      return;
+    }
     int id = 0;
     for(int i=0; i<this->size; i++){
       for(int j=0; j<this->size; j++){
         id = size*i + j;
         // std::cout << "n:" << size << " id:" << id << " i:" << i << " j:" << j << std::endl;
-        nodes.push_back(Node(id, i, j, goal));
+        Node* n = new Node(id, i, j, goal);
+        nodes[id] = n;
+        // nodes[id] = new Node(id, i, j, goal);
         if (j > 0) {
           this->graph.addEdge(id-1, id);
         }
@@ -148,11 +151,12 @@ public:
         // this->graph.printGraph();
       }
     }
+    this->is_generated = true;
   }
-
-  std::vector<Node> getNodes() { return nodes; };
-  
+  std::map<int, Node*> getNodes() { return nodes; };
+  Graph* getGraph() { return &graph; }
   void viewGraph() { this->graph.printGraph(); };
+  void solveMap() { return; }
 };
 
 int main(int argc, char** argv)
@@ -164,15 +168,24 @@ int main(int argc, char** argv)
   std::cout << dist << " " << n.getH() << std::endl;
   Node n2(2, start, goal);
   std::cout << dist << " " << n2.getH() << std::endl;
+
   Map m1;
+
+  std::cout << "testing graph m2..." << std::endl;
   Map m2(9, goal, start);
-  std::cout << "generating graph..." << std::endl;
-  m2.generateMap();
   std::cout << "generating graph..." << std::endl;
   m2.generateGraph();
   std::cout << "printing graph..." << std::endl;
   m2.viewGraph();
-  // for (Node& n : m1.getNodes()){
-  //   std::cout << "n(" << n.getPosX() <<"," << n.getPosY() << ") d:" << n.getH() << std::endl;
-  // }
+  
+  std::cout << "printing nodes..." << std::endl;
+  std::map<int, Node*> nodes = m2.getNodes();
+  for(int i=0; i< m2.getGraph()->getNodeCount(); i++){ 
+    Node* n = nodes[i];
+    std::cout << "n(" << n->getPosX() <<"," << n->getPosY() << ") d:" << n->getH() << std::endl;
+  }
+
+  std::cout << "removing edge..." << std::endl;
+  m2.getGraph()->removeEdge(0,1);
+  m2.viewGraph();
 }
