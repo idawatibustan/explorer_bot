@@ -11,7 +11,7 @@
 
 class Position;
 class Node;
-class Edge;
+// class Edge;
 
 class Position{
 private:
@@ -35,7 +35,6 @@ private:
   int id;
   Position p;
   double g, h, f;
-  std::vector<Edge> edges;
   bool calculated=false;
 public:
   Node(int id, int x, int y, const Position &goal) : p(x, y) {
@@ -60,20 +59,64 @@ public:
   }
 };
 
-class Edge{
+// class Edge{
+// private:
+//   bool checked;
+//   Node node_a, node_b;
+// public:
+//   std::vector<Node> nodes;
+//   Edge(const Node &a, const Node &b)
+//   : node_a(a), node_b(b) {
+//     this->checked = false;
+//   }
+//   Node getA() { return node_a; }
+//   Node getB() { return node_b; }
+//   bool get_checked() { return checked; }
+//   void set_checked() { checked = true; }
+// };
+
+class Graph{
 private:
-  bool checked;
-  Node node_a, node_b;
+  std::map<int, std::vector<int>> adj;
+  int node_count;
+  int edge_count;
 public:
-  std::vector<Node> nodes;
-  Edge(const Node &a, const Node &b)
-  : node_a(a), node_b(b) {
-    this->checked = false;
+  Graph(int node_num){
+    node_count=node_num;
+    edge_count=0;
+  };
+  bool isEdgeValid(int a, int b){
+    bool isBinA = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
+    bool isAinB = (std::find(adj[b].begin(), adj[b].end(), a) != adj[b].end());
+    return !isBinA && !isAinB;
   }
-  Node getA() { return node_a; }
-  Node getB() { return node_b; }
-  bool get_checked() { return checked; }
-  void set_checked() { checked = true; }
+  void addEdge(int a, int b){
+    if(isEdgeValid(a, b)) {
+      edge_count++;
+      adj[a].push_back(b);
+      adj[b].push_back(a);
+    }
+  }
+  bool removeEdge(int a, int b){
+    edge_count--;
+    adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
+    adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
+  }
+  std::vector<int> getEdges(int n){
+    return adj[n];
+  }
+  void printNeighbors(int n) {
+    std::cout << '[' << n << "] ";
+    for(std::vector<int>::const_iterator j = adj[n].begin(); j!= adj[n].end(); ++j){
+      std::cout << *j << ' ';
+    }
+    std::cout << std::endl;
+  }
+  void printGraph() {
+    for(int i = 0; i < node_count; i++){
+      printNeighbors(i);
+    }
+  }
 };
 
 class Map{
@@ -110,58 +153,33 @@ public:
   }
 
   void generateGraph(){
-    this->size;
-    this->init;
-    this->goal;
+    int id = 0;
     for(int i=0; i<this->size; i++){
       for(int j=0; j<this->size; j++){
-        // std::cout << "n " << (i+1)*(j+1) << std::endl;
-        int id = size*i + j;
+        id = size*i + j;
+        // std::cout << "n:" << size << " id:" << id << " i:" << i << " j:" << j << std::endl;
         nodes.push_back(Node(id, i, j, goal));
         if (j > 0) {
-          graph.addEdge(id-1, id);
+          this->graph.addEdge(id-1, id);
         }
-        if (j < size) {
-          graph.addEdge(id, id+1);
+        if (j < size-1) {
+          this->graph.addEdge(id, id+1);
         }
         if (i > 0) {
-          graph.addEdge(id-size, id);
+          this->graph.addEdge(id-size, id);
         }
-        if (i < size) {
-          graph.addEdge(id, id+size);
+        if (i < size-1) {
+          this->graph.addEdge(id, id+size);
         }
+        // this->graph.printGraph();
       }
     }
   }
 
   std::vector<Node> getNodes() { return nodes; };
+  
+  void viewGraph() { this->graph.printGraph(); };
 };
-
-class Graph{
-private:
-  std::map<int, std::vector> adj;
-  int node_count;
-  int edge_count;
-public:
-  Graph(int node_num){
-    node_count=node_num;
-    edge_count=0;
-  };
-  ~Graph();
-  void addEdge(int a, int b){
-    edge_count++;
-    adj[a].push_back(b);
-    adj[b].push_back(a);
-  }
-  bool removeEdge(int a, int b){
-    edge_count--;
-    adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
-    adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
-  }
-  std::vector getEdges(int n){
-    return adj[n]
-  }
-}
 
 class Explorer{
 private:
