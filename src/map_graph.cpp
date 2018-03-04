@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <map>
+#include <string>
 #include <vector>
 
 class Position{
@@ -38,15 +40,21 @@ public:
   }
   double getPosX() { return p.getX(); }
   double getPosY() { return p.getY(); }
-  double getH() { return h; }
+  int getId() { return this->id; }
+  double getH() { return this->h; }
   double getF() {
-    if (calculated)
-    return g+h;
-    else
-    return 0.0;
+    if (calculated) {
+      return this->f;
+    }
+    else {
+      this->f = this->g + this->h;
+      this->calculated = true;
+      return f;
+    }
   }
   double setG(double g) {
     this->g = g;
+    this->calculated = false;
   }
 };
 
@@ -100,6 +108,7 @@ public:
 class Map{
 private:
   int size;
+  int id_goal, id_init, id_curr;
   Position goal, init, curr;
   Graph graph;
   bool is_generated;
@@ -110,12 +119,18 @@ public:
   Map(int size, const Position &goal, const Position &init)
   : goal(goal), init(init), curr(init), graph(size*size) {
     this->size = size;
+    this->id_goal = size * this->goal.getX() + this->goal.getY();
+    this->id_init = size * this->init.getX() + this->init.getY();
+    this->id_curr = size * this->curr.getX() + this->curr.getY();
     this->is_generated = false;
     print();
   }
   Map()
   : goal(1,1), init(0,0), curr(0,0), graph(9) {
     this->size = 3;
+    this->id_goal = size * this->goal.getX() + this->goal.getY();
+    this->id_init = size * this->init.getX() + this->init.getY();
+    this->id_curr = size * this->curr.getX() + this->curr.getY();
     this->is_generated = false;
     print();
   }
@@ -156,7 +171,42 @@ public:
   std::map<int, Node*> getNodes() { return nodes; };
   Graph* getGraph() { return &graph; }
   void viewGraph() { this->graph.printGraph(); };
-  void solveMap() { return; }
+  void solveMap() { 
+    std::cout << "goal[" << id_goal << "]" << std::endl;
+    // get current node object
+    double g_val = 0.0;
+    Node* n_curr = this->nodes[id_curr];
+    n_curr->setG(g_val);
+    this->graph.getEdges(id_curr);
+    g_val++;
+
+    std::cout << std::setprecision(2) << std::fixed;
+    double min_f = 1000.0;  
+    Node* n_min = NULL;
+    while(id_curr != id_goal) {
+    // get neighbor & update f & g
+      min_f = 1000.0;
+      n_min = NULL;
+      for(int &i: this->graph.getEdges(id_curr)){
+        Node* n_temp = this->nodes[i];
+        n_temp->setG(g_val);
+        std::cout << "  node[" << i << "] h=" << n_temp->getH()
+                  << " f=" << n_temp->getF() << std::endl;
+        if(n_temp->getF() < min_f){
+          min_f = n_temp->getF();
+          n_min = n_temp;
+        }
+      }
+      n_curr = n_min;
+      this->id_curr = n_curr->getId();
+      std::cout << "* node[" << n_curr->getId() << "] h=" << n_curr->getH()
+                << " min_f=" << n_curr->getF() << std::endl << std::endl;
+      g_val++;
+    }
+    // pick lowest f
+    // set curr to f
+    // stop when reach goal
+  }
 };
 
 int main(int argc, char** argv)
@@ -169,23 +219,30 @@ int main(int argc, char** argv)
   Node n2(2, start, goal);
   std::cout << dist << " " << n2.getH() << std::endl;
 
-  Map m1;
+  // Map m1;
 
   std::cout << "testing graph m2..." << std::endl;
   Map m2(9, goal, start);
   std::cout << "generating graph..." << std::endl;
   m2.generateGraph();
   std::cout << "printing graph..." << std::endl;
-  m2.viewGraph();
+  // m2.viewGraph();
   
   std::cout << "printing nodes..." << std::endl;
   std::map<int, Node*> nodes = m2.getNodes();
   for(int i=0; i< m2.getGraph()->getNodeCount(); i++){ 
     Node* n = nodes[i];
-    std::cout << "n(" << n->getPosX() <<"," << n->getPosY() << ") d:" << n->getH() << std::endl;
+    std::cout << "n[" << i << "] (" << n->getPosX() <<"," << n->getPosY() << ") d:" << n->getH() << std::endl;
   }
+
+  std::cout << "solving map..." << std::endl;
+  m2.solveMap();
 
   std::cout << "removing edge..." << std::endl;
   m2.getGraph()->removeEdge(0,1);
-  m2.viewGraph();
+  // m2.viewGraph();
+
+  std::cout << "solving map..." << std::endl;
+  m2.solveMap();
+
 }
