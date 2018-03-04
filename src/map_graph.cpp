@@ -61,9 +61,9 @@ public:
     edge_count=0;
   };
   bool isEdgeValid(int a, int b){
-    bool resA = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
-    bool resB = (std::find(adj[b].begin(), adj[b].end(), a) != adj[b].end());
-    return resA && resB;
+    bool isBinA = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
+    bool isAinB = (std::find(adj[b].begin(), adj[b].end(), a) != adj[b].end());
+    return !isBinA && !isAinB;
   }
   void addEdge(int a, int b){
     if(isEdgeValid(a, b)) {
@@ -117,7 +117,6 @@ public:
     << " Curr:" << curr.getX() << ", " << curr.getY() << std::endl;
   }
   void generateMap() {
-    std::cout << "gen " << size << std::endl;
     for(int i=0; i<size; i++){
       for(int j=0; j<size; j++){
         // std::cout << "n " << (i+1)*(j+1) << std::endl;
@@ -132,26 +131,27 @@ public:
     for(int i=0; i<this->size; i++){
       for(int j=0; j<this->size; j++){
         id = size*i + j;
-        std::cout << "n " << id << ' ' << i << ' ' << j << std::endl;
+        // std::cout << "n:" << size << " id:" << id << " i:" << i << " j:" << j << std::endl;
         nodes.push_back(Node(id, i, j, goal));
         if (j > 0) {
           this->graph.addEdge(id-1, id);
         }
-        if (j < size) {
+        if (j < size-1) {
           this->graph.addEdge(id, id+1);
         }
         if (i > 0) {
           this->graph.addEdge(id-size, id);
         }
-        if (i < size) {
+        if (i < size-1) {
           this->graph.addEdge(id, id+size);
         }
-        this->graph.printGraph();
+        // this->graph.printGraph();
       }
     }
   }
 
   std::vector<Node> getNodes() { return nodes; };
+  
   void viewGraph() { this->graph.printGraph(); };
 };
 
@@ -166,11 +166,12 @@ int main(int argc, char** argv)
   std::cout << dist << " " << n2.getH() << std::endl;
   Map m1;
   Map m2(9, goal, start);
-  m1.generateMap();
   std::cout << "generating graph..." << std::endl;
-  m1.generateGraph();
+  m2.generateMap();
+  std::cout << "generating graph..." << std::endl;
+  m2.generateGraph();
   std::cout << "printing graph..." << std::endl;
-  m1.viewGraph();
+  m2.viewGraph();
   // for (Node& n : m1.getNodes()){
   //   std::cout << "n(" << n.getPosX() <<"," << n.getPosY() << ") d:" << n.getH() << std::endl;
   // }
