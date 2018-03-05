@@ -32,16 +32,19 @@ private:
   Position p_;
   double g_, h_, f_;
   bool calculated;
+  bool visited;
 public:
   Node(int id, int x, int y, const Position &goal) : p_(x, y) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
+    this->visited = false;
   }
   Node(int id, const Position &p, const Position &goal) : p_(p) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
+    this->visited = false;
   }
   double getPosX() { return this->p_.getX(); }
   double getPosY() { return this->p_.getY(); }
@@ -61,6 +64,10 @@ public:
   void setG(double g) {
     this->g_ = g;
     this->calculated = false;
+  }
+  bool is_visited() { return this->visited; }
+  void mark_visited() {
+    this->visited = true;
   }
 };
 
