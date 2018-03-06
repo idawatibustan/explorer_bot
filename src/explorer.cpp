@@ -354,10 +354,15 @@ public:
     int x = round(pos_x);
     int y = round(pos_y);
     int id_curr = 9 * x + y;
-    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 ) {
-      std::cout << "pos_x:" << pos_x << " x:" << x
-                << "pos_y:" << pos_y << " y:" << y << std::endl;
-      std::cout << "d_x:" << std::abs(pos_x - x) << " d_y:" << std::abs(pos_y - y)
+    int d_z = std::abs( int(ang_z*100) % 158);
+    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 10 ) {
+      std::cout << std::setprecision(2)
+                << " pos_x:" << pos_x << " x:" << x
+                << " pos_y:" << pos_y << " y:" << y
+                << " ang_z:" << ang_z << std::endl;
+      std::cout << "d_x:" << std::abs(pos_x - x)
+                << " d_y:" << std::abs(pos_y - y)
+                << " d_z:" << d_z
                 << " bot in the center, updating wall" << std::endl;
       update_wall(id_curr);
     }
