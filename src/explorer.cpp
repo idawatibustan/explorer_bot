@@ -81,24 +81,30 @@ public:
     this->node_count=node_num;
     this->edge_count=0;
   }
-  bool isEdgeValid(int a, int b){
+  bool doesEdgeExist(int a, int b){
     bool b_in_a = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
     bool a_in_b = (std::find(adj[b].begin(), adj[b].end(), a) != adj[b].end());
-    return !b_in_a && !a_in_b;
+    std::cout << "check if exist b_in_a: " << b_in_a
+              << " a_in_b: " << a_in_b << std::endl;
+    return b_in_a && a_in_b;
   }
   void addEdge(int a, int b){
-    if(isEdgeValid(a, b)) {
+    if(!doesEdgeExist(a, b)) {
       edge_count++;
       adj[a].push_back(b);
       adj[b].push_back(a);
     }
   }
-  void removeEdge(int a, int b){
+  bool removeEdge(int a, int b){
     std::cout << "removing " << a << "," << b << std::endl;
-    edge_count--;
-    adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
-    adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
-    return;
+    if(doesEdgeExist(a, b)) {
+      std::cout << "removing " << a << "," << b << std::endl;
+      edge_count--;
+      adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
+      adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
+      return true;
+    }
+    return false;
   }
   void printNeighbors(int n) {
     std::cout << '[' << n << "] ";
