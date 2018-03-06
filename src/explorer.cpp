@@ -146,8 +146,8 @@ public:
     print();
   }
   Map()
-  : goal_(1,1), init_(0,0), curr_(0,0), graph(9) {
-    this->size_ = 3;
+  : goal_(4,4), init_(0,0), curr_(0,0), graph(81) {
+    this->size_ = 9;
     this->id_goal = this->size_ * this->goal_.getX() + this->goal_.getY();
     this->id_init = this->size_ * this->init_.getX() + this->init_.getY();
     this->id_curr = this->size_ * this->curr_.getX() + this->curr_.getY();
