@@ -206,6 +206,38 @@ public:
       std::cout << std::endl;
     }
   }
+  bool updateEdge(int id, bool wall_front) {
+    std::cout << "WALL self " << wall_front << std::endl;
+    bool wall_change = false;
+    if(wall_front) {
+      wall_change = this->graph.removeEdge(id, id+this->size_);
+    }
+    if(wall_change){
+      ROS_INFO("updating edge, wall_changed");
+    } else {
+      ROS_INFO("no change");
+    }
+    return wall_change;
+  }
+  bool updateEdge(int id, bool wall_left, bool wall_front, bool wall_right){
+    std::cout << "WALL front " << wall_left << wall_front << wall_right << std::endl;
+    bool wall_change = false;
+    if(wall_left && id > 0) {
+      wall_change = this->graph.removeEdge(id, id-1) || wall_change;
+    }
+    if(wall_right && id%9 < this->size_) {
+      wall_change = this->graph.removeEdge(id, id+1) || wall_change;
+    }
+    if(wall_front && id/9 < this->size_) {
+      wall_change = this->graph.removeEdge(id, id+this->size_) || wall_change;
+    }
+    if(wall_change){
+      ROS_INFO("updating edge, wall_changed");
+    } else {
+      ROS_INFO("no change");
+    }
+    return wall_change;
+  }
   int solveNextStep(int n) {
     // get current node g(n) + 1 for next step
     double g_n = this->nodes[n]->getG() + 1;
@@ -263,7 +295,9 @@ public:
   Explorer(ros::NodeHandle &nh) : map() {
     goal_reached = false;
 
-    map.generateMap();
+    map.generateGraph();
+    map.viewGraph();
+    map.printAdj();
 
     goal_x = 4.0;
     goal_y = 4.0;
@@ -304,6 +338,34 @@ public:
     std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
   bool is_goal_reached() { return goal_reached; }
+  void update_wall(int curr) {
+    bool is_updated = false;
+    is_updated = map.updateEdge(curr, wall_front);
+    if(!wall_front){
+      // TODO: get orientation before deciding which to update
+      // hardcoded to front wall
+      is_updated = map.updateEdge(curr+9, wf_left, wf_front, wf_right) || is_updated;
+    }
+    if(is_updated){
+      this->map.printAdj();
+    }
+  }
+  void find_goal() {
+    int x = round(pos_x);
+    int y = round(pos_y);
+    int id_curr = 9 * x + y;
+    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 ) {
+      std::cout << "pos_x:" << pos_x << " x:" << x
+                << "pos_y:" << pos_y << " y:" << y << std::endl;
+      std::cout << "d_x:" << std::abs(pos_x - x) << " d_y:" << std::abs(pos_y - y)
+                << " bot in the center, updating wall" << std::endl;
+      update_wall(id_curr);
+    }
+    std::cout << "N[" << id_curr
+              << "](" << x << "," << y
+              << ")" << std::endl;
+    return;
+  }
 };
 
 int main(int argc, char** argv){
@@ -314,8 +376,7 @@ int main(int argc, char** argv){
   ros::Rate r(10);
   while (ros::ok()) {
     if (!ex.is_goal_reached())
-      ROS_INFO("trying");
-    ROS_INFO("again");
+      ex.find_goal();
     ros::spinOnce();
     r.sleep();
   }
