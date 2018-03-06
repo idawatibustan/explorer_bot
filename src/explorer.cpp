@@ -8,6 +8,7 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <nav_msgs/Odometry.h>
+#include <tf/transform_broadcaster.h>
 
 class Position{
 private:
@@ -286,6 +287,7 @@ private:
   double pos_x, pos_y, ori_z, ang_z;
   double goal_x, goal_y;
   double d_x, d_y;
+  double roll, pitch, yaw;
 
   bool goal_reached = false;
   bool wall_front, wf_left, wf_front, wf_right;
@@ -311,6 +313,13 @@ public:
     pos_y = poseMsg->pose.pose.position.y;
     ori_z = poseMsg->pose.pose.orientation.z;
     ang_z = ori_z*2.19;
+
+    tf::Quaternion q(poseMsg->pose.pose.orientation.x,
+      poseMsg->pose.pose.orientation.y,
+      poseMsg->pose.pose.orientation.z,
+      poseMsg->pose.pose.orientation.w);
+    tf::Matrix3x3 m(q);
+    m.getRPY(this->roll, this->pitch, this->yaw);
 
     d_x = std::abs(pos_x - goal_x);
     d_y = std::abs(pos_y - goal_y);
@@ -359,7 +368,9 @@ public:
       std::cout << std::setprecision(2)
                 << " pos_x:" << pos_x << " x:" << x
                 << " pos_y:" << pos_y << " y:" << y
-                << " ang_z:" << ang_z << std::endl;
+                << " ang_z:" << ang_z
+                << " RPY:" << roll << "," << pitch
+                << "," << yaw << std::endl;
       std::cout << "d_x:" << std::abs(pos_x - x)
                 << " d_y:" << std::abs(pos_y - y)
                 << " d_z:" << d_z
