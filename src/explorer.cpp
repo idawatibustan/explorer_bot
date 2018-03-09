@@ -239,37 +239,60 @@ public:
     }
     return this->graph.removeEdge(id, id_west);
   }
-  bool updateEdge(int id, bool wall_front) {
-    std::cout << "WALL self " << wall_front << std::endl;
+bool updateEdge(int id, int ori, bool wall_front) {
+    // ori: [0, 1, 2, 3] = [n, e, s, w]
+    std::cout << "WALL self " << ori
+              << " front:" << wall_front << std::endl;
     bool wall_change = false;
     if(wall_front) {
-      wall_change = this->graph.removeEdge(id, id+this->size_);
+      switch(ori) {
+        case 0 : wall_change = this->removeNorth(id); break;
+        case 1 : wall_change = this->removeEast(id); break;
+        case 2 : wall_change = this->removeSouth(id); break;
+        case 3 : wall_change = this->removeWest(id); break;
+      }
     }
-    if(wall_change){
-      ROS_INFO("updating edge, wall_changed");
+    if(wall_change) {
+      std::cout << "updating edge, wall_changed" << std::endl;
     } else {
-      ROS_INFO("no change");
+      std::cout << "no change" << std::endl;
     }
     return wall_change;
   }
-  bool updateEdge(int id, bool wall_left, bool wall_front, bool wall_right){
-    std::cout << "WALL front " << wall_left << wall_front << wall_right << std::endl;
-    bool wall_change = false;
-    if(wall_left && id > 0) {
-      wall_change = this->graph.removeEdge(id, id-1) || wall_change;
+  bool updateEdge(int id, int ori, bool wall_left, bool wall_front, bool wall_right){
+    std::cout << "WALL front " << ori
+              << " walls:" << wall_left << wall_front << wall_right << std::endl;
+    bool left_change, front_change, right_change;
+    if(wall_left) {
+      switch(ori) {
+        case 0 : left_change = this->removeWest(id); break;
+        case 1 : left_change = this->removeNorth(id); break;
+        case 2 : left_change = this->removeEast(id); break;
+        case 3 : left_change = this->removeSouth(id); break;
+      }
     }
-    if(wall_right && id%9 < this->size_) {
-      wall_change = this->graph.removeEdge(id, id+1) || wall_change;
+    if(wall_front) {
+      switch(ori) {
+        case 0 : front_change = this->removeNorth(id); break;
+        case 1 : front_change = this->removeEast(id); break;
+        case 2 : front_change = this->removeSouth(id); break;
+        case 3 : front_change = this->removeWest(id); break;
+      }
     }
-    if(wall_front && id/9 < this->size_) {
-      wall_change = this->graph.removeEdge(id, id+this->size_) || wall_change;
+    if(wall_right) {
+      switch(ori) {
+        case 0 : right_change = this->removeEast(id); break;
+        case 1 : right_change = this->removeSouth(id); break;
+        case 2 : right_change = this->removeWest(id); break;
+        case 3 : right_change = this->removeNorth(id); break;
+      }
     }
-    if(wall_change){
-      ROS_INFO("updating edge, wall_changed");
+    if(left_change || front_change || right_change){
+      std::cout << "updating edge, wall_changed" << std::endl;
     } else {
-      ROS_INFO("no change");
+      std::cout << "no change" << std::endl;
     }
-    return wall_change;
+    return left_change || front_change || right_change;
   }
   int solveNextStep(int n) {
     // get current node g(n) + 1 for next step
