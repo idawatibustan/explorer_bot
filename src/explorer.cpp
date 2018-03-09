@@ -207,6 +207,38 @@ public:
       std::cout << std::endl;
     }
   }
+  bool removeNorth(int id) {
+    int id_north = id+this->size_;
+    std::cout << "remove north: [" << id << ", " << id_north << "]" << std::endl; 
+    if (id_north >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_north);
+  }
+  bool removeEast(int id) {
+    int id_east = id+1;
+    std::cout << "remove east: [" << id << ", " << id_east << "]" << std::endl; 
+    if (id_east >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_east);
+  }
+  bool removeSouth(int id) {
+    int id_south = id-this->size_;
+    std::cout << "remove south: [" << id << ", " << id_south << "]" << std::endl; 
+    if (id_south >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_south);
+  }
+  bool removeWest(int id) {
+    int id_west = id-1;
+    std::cout << "remove west: [" << id << ", " << id_west << "]" << std::endl; 
+    if (id_west >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_west);
+  }
   bool updateEdge(int id, bool wall_front) {
     std::cout << "WALL self " << wall_front << std::endl;
     bool wall_change = false;
