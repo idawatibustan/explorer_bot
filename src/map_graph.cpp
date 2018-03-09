@@ -29,16 +29,19 @@ private:
   Position p_;
   double g_, h_, f_;
   bool calculated;
+  bool visited;
 public:
   Node(int id, int x, int y, const Position &goal) : p_(x, y) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
+    this->visited = false;
   }
   Node(int id, const Position &p, const Position &goal) : p_(p) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
+    this->visited = false;
   }
   double getPosX() { return this->p_.getX(); }
   double getPosY() { return this->p_.getY(); }
@@ -59,6 +62,10 @@ public:
     this->g_ = g;
     this->calculated = false;
   }
+  bool is_visited() { return this->visited; }
+  void mark_visited() {
+    this->visited = true;
+  }
 };
 
 class Graph{
@@ -71,24 +78,30 @@ public:
     this->node_count=node_num;
     this->edge_count=0;
   }
-  bool isEdgeValid(int a, int b){
+  bool doesEdgeExist(int a, int b){
     bool b_in_a = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
     bool a_in_b = (std::find(adj[b].begin(), adj[b].end(), a) != adj[b].end());
-    return !b_in_a && !a_in_b;
+    std::cout << "check if exist b_in_a: " << b_in_a
+              << " a_in_b: " << a_in_b << std::endl;
+    return b_in_a && a_in_b;
   }
   void addEdge(int a, int b){
-    if(isEdgeValid(a, b)) {
+    if(!doesEdgeExist(a, b)) {
       edge_count++;
       adj[a].push_back(b);
       adj[b].push_back(a);
     }
   }
-  void removeEdge(int a, int b){
+  bool removeEdge(int a, int b){
     std::cout << "removing " << a << "," << b << std::endl;
-    edge_count--;
-    adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
-    adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
-    return;
+    if(doesEdgeExist(a, b)) {
+      std::cout << "removing " << a << "," << b << std::endl;
+      edge_count--;
+      adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
+      adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
+      return true;
+    }
+    return false;
   }
   void printNeighbors(int n) {
     std::cout << '[' << n << "] ";
@@ -130,8 +143,8 @@ public:
     print();
   }
   Map()
-  : goal_(1,1), init_(0,0), curr_(0,0), graph(9) {
-    this->size_ = 3;
+  : goal_(4,4), init_(0,0), curr_(0,0), graph(81) {
+    this->size_ = 9;
     this->id_goal = this->size_ * this->goal_.getX() + this->goal_.getY();
     this->id_init = this->size_ * this->init_.getX() + this->init_.getY();
     this->id_curr = this->size_ * this->curr_.getX() + this->curr_.getY();
@@ -189,6 +202,93 @@ public:
       std::cout << std::endl;
       std::cout << std::endl;
     }
+  }
+  bool removeNorth(int id) {
+    int id_north = id+this->size_;
+    std::cout << "remove north: [" << id << ", " << id_north << "]" << std::endl; 
+    if (id_north >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_north);
+  }
+  bool removeEast(int id) {
+    int id_east = id+1;
+    std::cout << "remove east: [" << id << ", " << id_east << "]" << std::endl; 
+    if (id_east >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_east);
+  }
+  bool removeSouth(int id) {
+    int id_south = id-this->size_;
+    std::cout << "remove south: [" << id << ", " << id_south << "]" << std::endl; 
+    if (id_south >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_south);
+  }
+  bool removeWest(int id) {
+    int id_west = id-1;
+    std::cout << "remove west: [" << id << ", " << id_west << "]" << std::endl; 
+    if (id_west >= this->graph.getNodeCount()) {
+      return false;
+    }
+    return this->graph.removeEdge(id, id_west);
+  }
+  bool updateEdge(int id, int ori, bool wall_front) {
+    // ori: [0, 1, 2, 3] = [n, e, s, w]
+    std::cout << "WALL self " << ori
+              << " front:" << wall_front << std::endl;
+    bool wall_change = false;
+    if(wall_front) {
+      switch(ori) {
+        case 0 : wall_change = this->removeNorth(id); break;
+        case 1 : wall_change = this->removeEast(id); break;
+        case 2 : wall_change = this->removeSouth(id); break;
+        case 3 : wall_change = this->removeWest(id); break;
+      }
+    }
+    if(wall_change) {
+      std::cout << "updating edge, wall_changed" << std::endl;
+    } else {
+      std::cout << "no change" << std::endl;
+    }
+    return wall_change;
+  }
+  bool updateEdge(int id, int ori, bool wall_left, bool wall_front, bool wall_right){
+    std::cout << "WALL front " << ori
+              << " walls:" << wall_left << wall_front << wall_right << std::endl;
+    bool left_change, front_change, right_change;
+    if(wall_left) {
+      switch(ori) {
+        case 0 : left_change = this->removeWest(id); break;
+        case 1 : left_change = this->removeNorth(id); break;
+        case 2 : left_change = this->removeEast(id); break;
+        case 3 : left_change = this->removeSouth(id); break;
+      }
+    }
+    if(wall_front) {
+      switch(ori) {
+        case 0 : front_change = this->removeNorth(id); break;
+        case 1 : front_change = this->removeEast(id); break;
+        case 2 : front_change = this->removeSouth(id); break;
+        case 3 : front_change = this->removeWest(id); break;
+      }
+    }
+    if(wall_right) {
+      switch(ori) {
+        case 0 : right_change = this->removeEast(id); break;
+        case 1 : right_change = this->removeSouth(id); break;
+        case 2 : right_change = this->removeWest(id); break;
+        case 3 : right_change = this->removeNorth(id); break;
+      }
+    }
+    if(left_change || front_change || right_change){
+      std::cout << "updating edge, wall_changed" << std::endl;
+    } else {
+      std::cout << "no change" << std::endl;
+    }
+    return left_change || front_change || right_change;
   }
   int solveNextStep(int n) {
     // get current node g(n) + 1 for next step
@@ -254,18 +354,21 @@ int main()
   for(int i=0; i< m2.getGraph()->getNodeCount(); i++){ 
     Node* n = nodes[i];
     std::cout << "n[" << i << "] (" << n->getPosX() <<"," << n->getPosY() << ") d:" << n->getH() << std::endl;
-  }  
-
-  // std::cout << "solving map..." << std::endl;
-  // m2.solveMap();
+  }
 
   std::cout << "removing edge..." << std::endl;
-  m2.getGraph()->removeEdge(0,1);
-  m2.getGraph()->removeEdge(10,11);
-  m2.getGraph()->removeEdge(30,31);
-  // m2.printAdj()
+  m2.removeEast(0);
+  m2.removeWest(10);
+  m2.removeSouth(30);
+  // m2.removeNorth(22);
+  // m2.removeWest(22);
+  m2.updateEdge(20, 1, true);
+  m2.updateEdge(20, 1, true);
+  m2.updateEdge(22, 0, true, true, false);
+  // m2.printAdj();
 
   std::cout << "solving map..." << std::endl;
   m2.solveMap();
-  m2.viewGraph();
+  // m2.viewGraph();
+
 }
