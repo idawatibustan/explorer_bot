@@ -414,13 +414,19 @@ public:
     std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
   bool is_goal_reached() { return goal_reached; }
-  void update_wall(int curr) {
+  void update_wall(int map_curr_id, int ori) {
     bool is_updated = false;
-    is_updated = map.updateEdge(curr, wall_front);
-    if(!wall_front){
+    is_updated = map.updateEdge(map_curr_id, ori, this->wall_front);
+    if(!this->wall_front){
       // TODO: get orientation before deciding which to update
-      // hardcoded to front wall
-      is_updated = map.updateEdge(curr+9, wf_left, wf_front, wf_right) || is_updated;
+      int map_neighbor_id;
+      switch(ori) {
+        case 0 : map_neighbor_id = map_curr_id+this->map_size_; break;
+        case 1 : map_neighbor_id = map_curr_id+1; break;
+        case 2 : map_neighbor_id = map_curr_id-this->map_size_; break;
+        case 3 : map_neighbor_id = map_curr_id+1; break;
+      }
+      is_updated = map.updateEdge(map_neighbor_id, ori, this->wf_left, this->wf_front, this->wf_right) || is_updated;
     }
     if(is_updated){
       this->map.printAdj();
@@ -429,9 +435,13 @@ public:
   void find_goal() {
     int x = round(pos_x);
     int y = round(pos_y);
-    int id_curr = 9 * x + y;
     int d_z = std::abs( int(ang_z*100) % 158);
     if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 10 ) {
+      int map_curr_id = this->map_size_ * x + y;
+      // TODO: determine robot map_ori from yaw
+      // ori: [0, 1, 2, 3] = [n, e, s, w]
+      // int map_curr_ori = round( yaw / 1.5708 ) % 4
+
       std::cout << std::setprecision(2)
                 << " pos_x:" << pos_x << " x:" << x
                 << " pos_y:" << pos_y << " y:" << y
@@ -442,11 +452,11 @@ public:
                 << " d_y:" << std::abs(pos_y - y)
                 << " d_z:" << d_z
                 << " bot in the center, updating wall" << std::endl;
-      update_wall(id_curr);
+      update_wall(map_curr_id, map_curr_ori);
     }
-    std::cout << "N[" << id_curr
+    std::cout << "N[" << map_curr_id
               << "](" << x << "," << y
-              << ")" << std::endl;
+              << ") ori: " << map_curr_ori << std::endl;
     return;
   }
 };
