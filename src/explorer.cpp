@@ -411,7 +411,7 @@ public:
     wf_left = (res[1] == '1');
     wf_front = (res[2] == '1');
     wf_right = (res[3] == '1');
-    std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
+    // std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
   bool is_goal_reached() { return goal_reached; }
   void update_wall(int map_curr_id, int ori) {
@@ -455,28 +455,31 @@ public:
   void find_goal() {
     int x = round(pos_x);
     int y = round(pos_y);
-    int d_z = std::abs( int(ang_z*100) % 158);
-    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 10 ) {
-      int map_curr_id = this->map_size_ * x + y;
-      // TODO: determine robot map_ori from yaw
-      // ori: [0, 1, 2, 3] = [n, e, s, w]
-      // int map_curr_ori = round( yaw / 1.5708 ) % 4
+    // int d_z = std::abs( int(ang_z*100) % 158);
+    int z = round(yaw/1.5708);
+    double d_z = std::abs( yaw/1.5708 - z );
+    // d_z = std::abs( yaw/.15708 );
+    int map_curr_id = this->map_size_ * x + y;
+    int map_curr_ori = int(round( -yaw/1.5708 ) + 4 ) % 4;
 
-      std::cout << std::setprecision(2)
-                << " pos_x:" << pos_x << " x:" << x
-                << " pos_y:" << pos_y << " y:" << y
-                << " ang_z:" << ang_z
-                << " RPY:" << roll << "," << pitch
-                << "," << yaw << std::endl;
-      std::cout << "d_x:" << std::abs(pos_x - x)
-                << " d_y:" << std::abs(pos_y - y)
-                << " d_z:" << d_z
-                << " bot in the center, updating wall" << std::endl;
+    std::cout << "   d_x:" << std::abs(pos_x - x)
+              << " d_y:" << std::abs(pos_y - y)
+              << " d_z:" << d_z << std::endl;
+    std::cout << std::setprecision(3)
+              << "   pos_x:" << pos_x << " x:" << x
+              << " pos_y:" << pos_y << " y:" << y
+              << " ang_z:" << ang_z
+              << " yaw:" << yaw << std::endl;
+    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
+      // determine robot map_ori from yaw
+      // ori: [0, 1, 2, 3] = [n, e, s, w]
+      std::cout << "   bot in the center, updating wall" << std::endl;
+      std::cout << "N[" << map_curr_id
+                << "](" << x << "," << y
+                << ") ori: " << map_curr_ori << std::endl;
       update_wall(map_curr_id, map_curr_ori);
     }
-    std::cout << "N[" << map_curr_id
-              << "](" << x << "," << y
-              << ") ori: " << map_curr_ori << std::endl;
+
     return;
   }
 };
