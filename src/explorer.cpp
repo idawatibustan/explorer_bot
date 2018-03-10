@@ -357,6 +357,7 @@ private:
   ros::Subscriber pos_sub, wall_sub;
   ros::Publisher expl_pub;
   std_msgs::String status;
+
   ros::ServiceClient turn_north, turn_east, turn_south, turn_west;
   ros::ServiceClient move_north, move_east, move_south, move_west;
   std_srvs::Empty srv;
@@ -396,6 +397,7 @@ public:
 
     pos_sub = nh.subscribe("/odom",1,&Explorer::odom_callback, this);
     wall_sub = nh.subscribe("/wall_scan",1,&Explorer::wall_callback, this);
+    mov_sub = nh.subscribe("/is_moving",1,&Explorer::mov_callback, this);
     expl_pub = nh.advertise<std_msgs::String>("/explorer_status",1);
 
     turn_north = nh.serviceClient<std_srvs::Empty>("/turn_north");
@@ -446,6 +448,9 @@ public:
     wf_right = (res[3] == '1');
     // std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
+  void mov_callback( const std_msgs::BoolConstPtr& movMsg ) {
+    this->moving_flag = movMsg.data;
+  }
   bool is_init_completed() { return this->init_completed; }
   bool is_goal_reached() { return this->goal_reached; }
   void update_wall(int map_curr_id, int ori) {
@@ -470,6 +475,8 @@ public:
 
   }
   void init_search() {
+    if(this->is_moving)
+      return;
     switch(init_count){
       case 0: ROS_INFO("Updating 1st wall");
               break;
@@ -495,6 +502,8 @@ public:
     */
   }
   void find_goal() {
+    if(this->moving_flag)
+      return;
     int x = round(pos_x);
     int y = round(pos_y);
     int z = round(yaw/1.5708);
