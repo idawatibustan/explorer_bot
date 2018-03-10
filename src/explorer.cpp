@@ -326,6 +326,7 @@ public:
     << " min f(n)=" << std::setw(5) << n_min->getF()
     << std::endl << std::endl;
     // return node index with the lowest f(n)
+    path.push_back(n_min->getId());
     return n_min->getId();
   }
   void solveMap() {
@@ -336,6 +337,18 @@ public:
       // add next node to path
       path.push_back(this->id_curr);
     }
+  }
+  int peekNextPath(int n){
+    bool getNext = false;
+    for(int &j: this->path){
+      if(getNext == true){
+        return j;
+      }
+      if (j == n){
+        getNext = true;
+      }
+    }
+    return 0;
   }
 };
 
@@ -356,7 +369,7 @@ private:
   int init_count;
   bool init_completed, goal_reached;
   bool wall_front, wf_left, wf_front, wf_right;
-
+  bool moving_flag;
   int map_size_;
   Map map;
 
@@ -373,6 +386,8 @@ public:
     goal_x = 4.0;
     goal_y = 4.0;
     map_size_ = 9;
+
+    moving_flag = false;
 
     wall_front = false;
     wf_left = false;
@@ -451,6 +466,9 @@ public:
       this->map.printAdj();
     }
   }
+  void add_init_frontier(){
+
+  }
   void init_search() {
     switch(init_count){
       case 0: ROS_INFO("Updating 1st wall");
@@ -468,23 +486,12 @@ public:
               this->turn_north.call(srv);
               break;
     }
-    // int map_init_id=0, map_curr_ori=0;
-    // declare initial position
-    // updateWall;
-    // this->update_wall(map_init_id, map_curr_ori);
-    // TODO: determine robot map_ori from yaw
-    // ori: [0, 1, 2, 3] = [n, e, s, w]
-    // map_curr_ori = int(round( -yaw / 1.5708 ) + 4) % 4;
-    // this->update_wall(map_init_id, map_curr_ori);
     /*
-
+    // declare initial position
+    // update_wall;
     // if(east exists) turnEast, updateWall;
-    this->updateWall(map_init_id, map_curr_ori)
     // if(south exits) turn south, updateWall;
-    this->map.updateEdge(map_init_id, map_init_ori);
     // if(west exists) turn west, updateWall;
-    this->map.updateEdge(map_init_id, map_init_ori);
-    // add neighbor to frontier
     */
   }
   void find_goal() {
@@ -495,42 +502,67 @@ public:
     int map_curr_id = this->map_size_ * x + y;
     int map_curr_ori = int(round( -yaw/1.5708 ) + 4 ) % 4;
 
-    // STEP1: look around first block
-
-    // STEP2: add frontier
-
-
-    std::cout << "   d_x:" << std::abs(pos_x - x)
-              << " d_y:" << std::abs(pos_y - y)
-              << " d_z:" << d_z << std::endl;
-    std::cout << std::setprecision(3)
-              << "   pos_x:" << pos_x << " x:" << x
-              << " pos_y:" << pos_y << " y:" << y
-              << " ang_z:" << ang_z
-              << " yaw:" << yaw << std::endl;
+    // std::cout << "   d_x:" << std::abs(pos_x - x)
+    //           << " d_y:" << std::abs(pos_y - y)
+    //           << " d_z:" << d_z << std::endl;
+    // std::cout << std::setprecision(3)
+    //           << "   pos_x:" << pos_x << " x:" << x
+    //           << " pos_y:" << pos_y << " y:" << y
+    //           << " ang_z:" << ang_z
+    //           << " yaw:" << yaw << std::endl;
     if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.05 ) {
       // determine robot map_ori from yaw
       // ori: [0, 1, 2, 3] = [n, e, s, w]
-      std::cout << "   bot in the center, updating wall" << std::endl;
+      // std::cout << "   bot in the center, updating wall" << std::endl;
       std::cout << "N[" << map_curr_id
                 << "](" << x << "," << y
                 << ") ori: " << map_curr_ori << std::endl;
       this->update_wall(map_curr_id, map_curr_ori);
-      if(this->init_count < 5){
+      if( this->init_count < 5){
         switch (init_count) {
           case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
           case 1: this->init_count = (map_curr_ori == 1) ? 2 : 1; break;
           case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
           case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
-          case 4: this->init_completed = true; break;
+          case 4: ROS_INFO("CASE 4 REACHED");
+                  this->init_completed = true;
+                  this->init_count++;
+                  this->map.solveNextStep(map_curr_id);
+                  break;
         }
       }
+    }
+    int map_next_id = this->map.peekNextPath(map_curr_id);
+    if(map_curr_id != map_next_id){
+      ROS_INFO("MOVE!!! %d -> %d", map_curr_id, map_next_id);
+      int n = map_curr_id+this->map_size_;
+      int e = map_curr_id+1;
+      int s = map_curr_id-this->map_size_;
+      int w = map_curr_id-1;
+      if(!moving_flag) {
+        if(map_next_id == n) {
+          this->move_north.call(srv);
+          moving_flag = true;
+        } else if (map_next_id == e) {
+          this->move_east.call(srv);
+          moving_flag = true;
+        } else if (map_next_id == e) {
+          this->move_south.call(srv);
+          moving_flag = true;
+        } else if (map_next_id == e) {
+          this->move_west.call(srv);
+          moving_flag = true;
+        }
+      }
+    } else {
+      ROS_INFO("chillin!!! %d -> %d", map_curr_id, map_next_id);
     }
 
     return;
   }
   void close() {
     this->map.printAdj();
+    this->map.viewGraph();
   }
 };
 
