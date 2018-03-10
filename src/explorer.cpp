@@ -432,6 +432,26 @@ public:
       this->map.printAdj();
     }
   }
+  void init_search() {
+    int map_init_id=0, map_curr_ori=0;
+    // declare initial position
+    // updateWall;
+    this->updateWall(map_init_id, map_curr_ori)
+    /*
+    // TODO: determine robot map_ori from yaw
+    // ori: [0, 1, 2, 3] = [n, e, s, w]
+    // int map_curr_ori = round( yaw / 1.5708 ) % 4
+    this->updateWall(map_init_id, map_curr_ori)
+
+    // if(east exists) turnEast, updateWall;
+    this->updateWall(map_init_id, map_curr_ori)
+    // if(south exits) turn south, updateWall;
+    this->map.updateEdge(map_init_id, map_init_ori);
+    // if(west exists) turn west, updateWall;
+    this->map.updateEdge(map_init_id, map_init_ori);
+    // add neighbor to frontier
+    */
+  }
   void find_goal() {
     int x = round(pos_x);
     int y = round(pos_y);
