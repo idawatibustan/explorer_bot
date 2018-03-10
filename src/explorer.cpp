@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
 #include <std_msgs/String.h>
 #include <std_srvs/Empty.h>
 #include <nav_msgs/Odometry.h>
@@ -354,7 +355,7 @@ public:
 
 class Explorer{
 private:
-  ros::Subscriber pos_sub, wall_sub;
+  ros::Subscriber pos_sub, wall_sub, mov_sub;
   ros::Publisher expl_pub;
   std_msgs::String status;
 
@@ -475,7 +476,7 @@ public:
 
   }
   void init_search() {
-    if(this->is_moving)
+    if(this->moving_flag)
       return;
     switch(init_count){
       case 0: ROS_INFO("Updating 1st wall");
