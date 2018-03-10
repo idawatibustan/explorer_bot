@@ -353,7 +353,8 @@ private:
   double goal_x, goal_y;
   double d_x, d_y;
 
-  bool goal_reached;
+  int init_count;
+  bool init_completed, goal_reached;
   bool wall_front, wf_left, wf_front, wf_right;
 
   int map_size_;
@@ -361,7 +362,9 @@ private:
 
 public:
   Explorer(ros::NodeHandle &nh) : map() {
-    goal_reached = false;
+    this->init_completed = false;
+    this->goal_reached = false;
+    this->init_count = 0;
 
     map.generateGraph();
     map.viewGraph();
@@ -428,7 +431,8 @@ public:
     wf_right = (res[3] == '1');
     // std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
-  bool is_goal_reached() { return goal_reached; }
+  bool is_init_completed() { return this->init_completed; }
+  bool is_goal_reached() { return this->goal_reached; }
   void update_wall(int map_curr_id, int ori) {
     bool is_updated = false;
     is_updated = map.updateEdge(map_curr_id, ori, this->wall_front);
@@ -448,15 +452,31 @@ public:
     }
   }
   void init_search() {
-    int map_init_id=0, map_curr_ori=0;
+    switch(init_count){
+      case 0: ROS_INFO("Updating 1st wall");
+              break;
+      case 1: ROS_INFO("Updating 2nd wall");
+              this->turn_east.call(srv);
+              break;
+      case 2: ROS_INFO("Updating 3rd wall");
+              this->turn_south.call(srv);
+              break;
+      case 3: ROS_INFO("Updating 3rd wall");
+              this->turn_west.call(srv);
+              break;
+      case 4: ROS_INFO("Back to initial state");
+              this->turn_north.call(srv);
+              break;
+    }
+    // int map_init_id=0, map_curr_ori=0;
     // declare initial position
     // updateWall;
-    this->updateWall(map_init_id, map_curr_ori)
-    /*
+    // this->update_wall(map_init_id, map_curr_ori);
     // TODO: determine robot map_ori from yaw
     // ori: [0, 1, 2, 3] = [n, e, s, w]
-    // int map_curr_ori = round( yaw / 1.5708 ) % 4
-    this->updateWall(map_init_id, map_curr_ori)
+    // map_curr_ori = int(round( -yaw / 1.5708 ) + 4) % 4;
+    // this->update_wall(map_init_id, map_curr_ori);
+    /*
 
     // if(east exists) turnEast, updateWall;
     this->updateWall(map_init_id, map_curr_ori)
@@ -470,12 +490,15 @@ public:
   void find_goal() {
     int x = round(pos_x);
     int y = round(pos_y);
-    // int d_z = std::abs( int(ang_z*100) % 158);
     int z = round(yaw/1.5708);
     double d_z = std::abs( yaw/1.5708 - z );
-    // d_z = std::abs( yaw/.15708 );
     int map_curr_id = this->map_size_ * x + y;
     int map_curr_ori = int(round( -yaw/1.5708 ) + 4 ) % 4;
+
+    // STEP1: look around first block
+
+    // STEP2: add frontier
+
 
     std::cout << "   d_x:" << std::abs(pos_x - x)
               << " d_y:" << std::abs(pos_y - y)
@@ -492,7 +515,16 @@ public:
       std::cout << "N[" << map_curr_id
                 << "](" << x << "," << y
                 << ") ori: " << map_curr_ori << std::endl;
-      update_wall(map_curr_id, map_curr_ori);
+      this->update_wall(map_curr_id, map_curr_ori);
+      if(this->init_count < 5){
+        switch (init_count) {
+          case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
+          case 1: this->init_count = (map_curr_ori == 1) ? 2 : 1; break;
+          case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
+          case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
+          case 4: this->init_completed = true; break;
+        }
+      }
     }
 
     return;
@@ -509,6 +541,9 @@ int main(int argc, char** argv){
 
   ros::Rate r(10);
   while (ros::ok()) {
+    if (!ex.is_init_completed()) {
+      ex.init_search();
+    }
     if (!ex.is_goal_reached())
       ex.find_goal();
     ros::spinOnce();
