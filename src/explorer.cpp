@@ -8,6 +8,7 @@
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <std_srvs/Empty.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_broadcaster.h>
 
@@ -245,7 +246,7 @@ public:
   }
   bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
-    std::cout << "WALL self " << ori
+    std::cout << "WALL self " << id << ">" << ori
               << " front:" << wall_front << std::endl;
     bool wall_change = false;
     if(wall_front) {
@@ -264,9 +265,9 @@ public:
     return wall_change;
   }
   bool updateEdge(int id, int ori, bool wall_left, bool wall_front, bool wall_right){
-    std::cout << "WALL front " << ori
+    std::cout << " --> WALL front " << id << ">" << ori
               << " walls:" << wall_left << wall_front << wall_right << std::endl;
-    bool left_change, front_change, right_change;
+    bool left_change=false, front_change=false, right_change=false;
     if(wall_left) {
       switch(ori) {
         case 0 : left_change = this->removeWest(id); break;
@@ -292,7 +293,7 @@ public:
       }
     }
     if(left_change || front_change || right_change){
-      std::cout << "updating edge, wall_changed" << std::endl;
+      std::cout << "updating edge, wall_changed" << left_change << front_change << right_change << std::endl;
     } else {
       std::cout << "no change" << std::endl;
     }
@@ -470,7 +471,7 @@ public:
               << " pos_y:" << pos_y << " y:" << y
               << " ang_z:" << ang_z
               << " yaw:" << yaw << std::endl;
-    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
+    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.05 ) {
       // determine robot map_ori from yaw
       // ori: [0, 1, 2, 3] = [n, e, s, w]
       std::cout << "   bot in the center, updating wall" << std::endl;
@@ -481,6 +482,9 @@ public:
     }
 
     return;
+  }
+  void close() {
+    this->map.printAdj();
   }
 };
 
@@ -496,5 +500,6 @@ int main(int argc, char** argv){
     ros::spinOnce();
     r.sleep();
   }
+  ex.close();
   return 0;
 }
