@@ -344,6 +344,10 @@ private:
   ros::Subscriber pos_sub, wall_sub;
   ros::Publisher expl_pub;
   std_msgs::String status;
+  ros::ServiceClient turn_north, turn_east, turn_south, turn_west;
+  ros::ServiceClient move_north, move_east, move_south, move_west;
+  std_srvs::Empty srv;
+
   double pos_x, pos_y, ori_z, ang_z;
   double roll, pitch, yaw;
   double goal_x, goal_y;
@@ -375,6 +379,16 @@ public:
     pos_sub = nh.subscribe("/odom",1,&Explorer::odom_callback, this);
     wall_sub = nh.subscribe("/wall_scan",1,&Explorer::wall_callback, this);
     expl_pub = nh.advertise<std_msgs::String>("/explorer_status",1);
+
+    turn_north = nh.serviceClient<std_srvs::Empty>("/turn_north");
+    turn_east = nh.serviceClient<std_srvs::Empty>("/turn_east");
+    turn_south = nh.serviceClient<std_srvs::Empty>("/turn_south");
+    turn_west = nh.serviceClient<std_srvs::Empty>("/turn_west");
+
+    move_north = nh.serviceClient<std_srvs::Empty>("/move_north");
+    move_east = nh.serviceClient<std_srvs::Empty>("/move_east");
+    move_south = nh.serviceClient<std_srvs::Empty>("/move_south");
+    move_west = nh.serviceClient<std_srvs::Empty>("/move_west");
   }
   void odom_callback( const nav_msgs::OdometryConstPtr& poseMsg ) {
     pos_x = poseMsg->pose.pose.position.x;
