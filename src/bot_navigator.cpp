@@ -14,6 +14,8 @@ class BotNavigator{
 private:
   ros::Subscriber pos_sub;
   ros::Publisher vel_pub;
+  ros::Publisher mov_pub;
+
   ros::ServiceServer move_north;
   ros::ServiceServer move_south;
   ros::ServiceServer move_east;
