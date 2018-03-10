@@ -2,6 +2,7 @@
 #include <cmath>
 #include <iostream>
 #include <map>
+#include <stack>
 #include <string>
 #include <vector>
 
@@ -135,6 +136,7 @@ private:
   bool is_generated;
   std::map<int, Node*> nodes;
   std::vector<int> path;
+  std::stack<int> dfs_stack;
 public:
   Map(int size, const Position &goal, const Position &init)
   : goal_(goal), init_(init), curr_(init), graph(size*size) {
@@ -143,6 +145,7 @@ public:
     this->id_init = size * this->init_.getX() + this->init_.getY();
     this->id_curr = size * this->curr_.getX() + this->curr_.getY();
     this->path.push_back(this->id_init);
+    this->dfs_stack.push(this->id_init);
     this->is_generated = false;
     print();
   }
@@ -153,6 +156,7 @@ public:
     this->id_init = this->size_ * this->init_.getX() + this->init_.getY();
     this->id_curr = this->size_ * this->curr_.getX() + this->curr_.getY();
     this->path.push_back(this->id_init);
+    this->dfs_stack.push(this->id_init);
     this->is_generated = false;
     print();
   }
@@ -239,7 +243,7 @@ public:
     }
     return this->graph.removeEdge(id, id_west);
   }
-bool updateEdge(int id, int ori, bool wall_front) {
+  bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
     std::cout << "WALL self " << ori
               << " front:" << wall_front << std::endl;
@@ -340,12 +344,14 @@ private:
   ros::Publisher expl_pub;
   std_msgs::String status;
   double pos_x, pos_y, ori_z, ang_z;
+  double roll, pitch, yaw;
   double goal_x, goal_y;
   double d_x, d_y;
-  double roll, pitch, yaw;
 
-  bool goal_reached = false;
+  bool goal_reached;
   bool wall_front, wf_left, wf_front, wf_right;
+
+  int map_size_;
   Map map;
 
 public:
@@ -358,6 +364,12 @@ public:
 
     goal_x = 4.0;
     goal_y = 4.0;
+    map_size_ = 9;
+
+    wall_front = false;
+    wf_left = false;
+    wf_front = false;
+    wf_right = false;
 
     pos_sub = nh.subscribe("/odom",1,&Explorer::odom_callback, this);
     wall_sub = nh.subscribe("/wall_scan",1,&Explorer::wall_callback, this);
