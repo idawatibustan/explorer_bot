@@ -48,7 +48,7 @@ public:
 
     is_moving = false;
 
-    kp_x = 0.6;
+    kp_x = 0.8;
     kp_z = -0.9;
     max_x = 0.5;
     max_z = 0.5;
@@ -180,7 +180,7 @@ public:
 
     if(move_n == 1){ //flag to move north //moving in the north direction
       is_moving = true;
-      if(std::abs(dt) < 0.08){
+      if(turn == 0){
         if(pos_x < target_x && dx > 0.01) {
           trans_x = kp_x * dx; //*dist; // Change robot velocity
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
@@ -198,7 +198,7 @@ public:
 
     if(move_s == 1){ //flag to move move_east
       is_moving = true;
-      if(std::abs(dt) < 0.08) {
+      if(turn == 0) {
         if(pos_x > target_x && dx > 0.01){
           trans_x = kp_x * dx; //*dist; // Change robot velocity
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
@@ -216,7 +216,7 @@ public:
 
     if(move_e == 1){ //flag to move move_east
       is_moving = true;
-      if(std::abs(dt) < 0.08) {
+      if(turn == 0) {
         if(pos_y > target_y && dy > 0.01){
           trans_x = kp_x * dy; //*dist; // Change robot velocity
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
@@ -234,7 +234,7 @@ public:
 
     if(move_w == 1){ //flag to move move_west
       is_moving = true;
-      if(std::abs(dt) < 0.08) {
+      if(turn == 0) {
         if(pos_y < target_y && dy > 0.01){
           trans_x = kp_x * dy; //*dist; // Change robot velocity
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
@@ -265,26 +265,30 @@ public:
     }
 
     double dv_x = trans_x - prev_trans_x;
-    double dv_z = trans_z - prev_trans_z;
+    double dv_z = std::abs(trans_z - prev_trans_z);
 
-    if ( dv_x > 0.2 ) {
+    if ( dv_x > 0.1 ) {
       prev_trans_x += 0.1;
     } else {
       prev_trans_x = trans_x;
     }
 
-    if ( dv_z > 0.2 ) {
-      prev_trans_z += 0.1;
+    if ( dv_z > 0.1 ) {
+      if (trans_z < 0) {
+        prev_trans_z -= 0.1;
+      } else {
+        prev_trans_z += 0.1;
+      }
     } else {
       prev_trans_z = trans_z;
     }
 
     base_cmd.linear.x = prev_trans_x;
-    // if(turn == 1){
-    base_cmd.angular.z = prev_trans_z;
-    // }
-
+    if(turn == 1){
+      base_cmd.angular.z = prev_trans_z;
+    }
     vel_pub.publish(base_cmd);
+    
     moving.data = is_moving;
     mov_pub.publish(moving);
 
