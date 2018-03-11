@@ -315,7 +315,6 @@ public:
             else{
               trans_z = 0.00;
               turn = 0;
-              is_moving = false;
             }
           }
           else{
@@ -334,7 +333,6 @@ public:
             else{
               trans_z = 0.0;
               turn = 0;
-              is_moving = false;
             }
           }
         }
@@ -356,7 +354,6 @@ public:
             else{
               trans_z = 0.0;
               turn = 0;
-              is_moving = false;
 
             }
           } //ensuring the shortest path
@@ -376,7 +373,6 @@ public:
             else{
               trans_z = 0.0;
               turn = 0;
-              is_moving = false;
 
             }
           }
@@ -397,7 +393,6 @@ public:
           trans_x = 0.0;
           move_x = 0;
           move_y = 0;
-          is_moving = false;
         }
       }
       if(turn == 0 && move_y == 1 && move_x == 0){
@@ -410,12 +405,15 @@ public:
           trans_x = 0.0;
           move_x = 0;
           move_y = 0;
-          is_moving = false;
         }
       }
       std::cout << "Pos_x = " << pos_x <<'\n';
       std::cout << "Pos_y = " << pos_y <<'\n';
 
+      if(trans_x == 0 && trans_z == 0){
+        is_moving = false:
+      }
+      
       if(move_y == 1 || move_x == 1){
         base_cmd.linear.x = trans_x;
       }
