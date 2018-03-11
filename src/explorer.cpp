@@ -261,6 +261,26 @@ public:
     }
     return this->graph.removeEdge(id, id_west);
   }
+  void forceUpdateEdge(int id, int ori, bool wall_front) {
+    // ori: [0, 1, 2, 3] = [n, e, s, w]
+    std::cout << "FORCE UPDATE " << id << ">" << ori
+              << " front:" << wall_front << std::endl;
+    if(wall_front) {
+      switch(ori) {
+        case 0 : this->removeNorth(id); break;
+        case 1 : this->removeEast(id); break;
+        case 2 : this->removeSouth(id); break;
+        case 3 : this->removeWest(id); break;
+      }
+    } else {
+      switch(ori) {
+        case 0 : this->graph.addEdge(id, id+this->size_); break; // add North
+        case 1 : this->graph.addEdge(id, id+1); break; // add East
+        case 2 : this->graph.addEdge(id-this->size_, id); break; // add South
+        case 3 : this->graph.addEdge(id-1, id); break; // add West
+      }
+    }
+  }
   bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
     std::cout << "WALL self " << id << ">" << ori
@@ -340,6 +360,9 @@ public:
         n_min = n_temp;
       }
     }
+    if (min_f = 1000.0 || n_min = NULL){
+      return -1;
+    }
     std::cout << "* node[" << std::setw(2) << n_min->getId()
     << "] h(n)=" << std::setw(5) << n_min->getH()
     << " min f(n)=" << std::setw(5) << n_min->getF()
@@ -382,8 +405,6 @@ public:
 class Explorer{
 private:
   ros::Subscriber pos_sub, wall_sub, mov_sub;
-  ros::Publisher expl_pub;
-  std_msgs::String status;
 
   ros::ServiceClient turn_north, turn_east, turn_south, turn_west;
   ros::ServiceClient move_north, move_east, move_south, move_west;
@@ -395,10 +416,11 @@ private:
   double goal_x, goal_y;
   double d_x, d_y;
 
-  int init_count;
+  int init_count, solver_code;
   bool init_completed, goal_reached;
+  bool is_moving, recovery_mode;
   bool wall_front, wf_left, wf_front, wf_right;
-  bool moving_flag;
+
   int map_size_;
   Map map;
 
@@ -406,27 +428,28 @@ public:
   Explorer(ros::NodeHandle &nh) : map() {
     this->init_completed = false;
     this->goal_reached = false;
+    this->is_moving = false;
+    this->recovery_mode = false;
+
     this->init_count = 0;
+    this->solver_code = 0;
 
     map.generateGraph();
     map.viewGraph();
     map.printAdj();
 
-    goal_x = 4.0;
-    goal_y = 4.0;
-    map_size_ = 9;
+    this->goal_x = 4.0;
+    this->goal_y = 4.0;
+    this->map_size_ = 9;
 
-    moving_flag = false;
-
-    wall_front = false;
-    wf_left = false;
-    wf_front = false;
-    wf_right = false;
+    this->wall_front = false;
+    this->wf_left = false;
+    this->wf_front = false;
+    this->wf_right = false;
 
     pos_sub = nh.subscribe("/odom",1,&Explorer::odom_callback, this);
     wall_sub = nh.subscribe("/wall_scan",1,&Explorer::wall_callback, this);
     mov_sub = nh.subscribe("/is_moving",1,&Explorer::mov_callback, this);
-    expl_pub = nh.advertise<std_msgs::String>("/explorer_status",1);
 
     turn_north = nh.serviceClient<std_srvs::Empty>("/turn_north");
     turn_east = nh.serviceClient<std_srvs::Empty>("/turn_east");
@@ -442,7 +465,6 @@ public:
     pos_x = poseMsg->pose.pose.position.x;
     pos_y = -poseMsg->pose.pose.position.y;
     ori_z = poseMsg->pose.pose.orientation.z;
-    ang_z = ori_z*2.19;
 
     tf::Quaternion q(poseMsg->pose.pose.orientation.x,
       poseMsg->pose.pose.orientation.y,
@@ -454,14 +476,11 @@ public:
     d_x = std::abs(pos_x - goal_x);
     d_y = std::abs(pos_y - goal_y);
     if ( d_x < 0.2 && d_y < 0.2 ) {
-      status.data = "goal";
       this->goal_reached = true;
     } else {
-      status.data = "nope";
       this->goal_reached = false;
     }
 
-    expl_pub.publish(status);
     // std::cout<< std::setprecision(2) << std::fixed;
     // std::cout << poseMsg->header.stamp
     //           << " Curr:" << pos_x << ", " << pos_y
@@ -477,7 +496,7 @@ public:
     // std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
   void mov_callback( const std_msgs::BoolConstPtr& movMsg ) {
-    this->moving_flag = movMsg->data;
+    this->is_moving = movMsg->data;
   }
   bool is_init_completed() { return this->init_completed; }
   bool is_goal_reached() { return this->goal_reached; }
@@ -485,7 +504,7 @@ public:
     bool is_updated = false;
     is_updated = map.updateEdge(map_curr_id, ori, this->wall_front);
     if(!this->wall_front){
-      // TODO: get orientation before deciding which to update
+      // get orientation before deciding which to update
       int map_neighbor_id;
       switch(ori) {
         case 0 : map_neighbor_id = map_curr_id+this->map_size_; break;
@@ -499,11 +518,15 @@ public:
       this->map.printAdj();
     }
   }
+  void force_update_wall(int map_curr_id, int ori) {
+    this->map.forceUpdateEdge(map_curr_id, ori, this->wall_front);
+  }
   void init_search() {
-    if(this->moving_flag)
+    if(this->is_moving)
       return;
     switch(init_count){
       case 0: ROS_INFO("Updating 1st wall");
+              this->turn_north.call(esrv);
               break;
       case 1: ROS_INFO("Updating 2nd wall");
               this->turn_east.call(esrv);
@@ -549,11 +572,15 @@ public:
       std::cout << "**N[" << map_curr_id
                 << "](" << x << "," << y
                 << ") ori: " << map_curr_ori << std::endl;
-      this->update_wall(map_curr_id, map_curr_ori);
+      if(this->recovery_mode){
+        this->force_update_wall(map_curr_id, map_curr_ori);
+      } else {
+        this->update_wall(map_curr_id, map_curr_ori);
+      }
     }
     std::cout << "-" << std::endl;
     // if robot is moving, don't perform any search algo
-    if(this->moving_flag)
+    if(this->is_moving)
       return;
     if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
       if( this->init_count < 6){
@@ -566,7 +593,7 @@ public:
                   break;
           case 5: this->init_count++;
                   this->init_completed = true;
-                  this->map.solveNextStep(map_curr_id);
+                  this->solver_code = this->map.solveNextStep(map_curr_id);
                   ROS_INFO("trying to solve next");
                   break;
         }
@@ -579,7 +606,11 @@ public:
       std::cout << "next = " << map_next_id
                 << " curr = " << map_curr_id << std::endl;
       if (map_next_id == -1) {
-        this->map.solveNextStep(map_curr_id);
+        if (this->solver_code == -2) {
+          ROS_INFO("Robot stuck, recovery_mode triggered")
+        } else {
+          this->solver_code = this->map.solveNextStep(map_curr_id);
+        }
       }
     }
     if(map_curr_id != map_next_id){
@@ -589,7 +620,7 @@ public:
       int s = map_curr_id-this->map_size_;
       int w = map_curr_id-1;
       this->goal = this->map.getNodeGoal(map_curr_id);
-      if(!moving_flag) {
+      if(!this->is_moving) {
         ROS_INFO("send");
         if(map_next_id == n) {
           this->move_north.call(goal);
@@ -600,11 +631,15 @@ public:
         } else if (map_next_id == w) {
           this->move_west.call(goal);
         } else {
-          ROS_INFO("not_sending");
+          ROS_INFO("nothing match");
         }
       }
     } else {
       ROS_INFO("chillin!!! %d -> %d", map_curr_id, map_next_id);
+    }
+    if(this->recovery_mode){
+      ROS_INFO("Do something");
+      this->force_update_wall()
     }
 
     return;
