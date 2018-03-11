@@ -2,7 +2,7 @@
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <std_srvs/Empty.h>
-#include <tf/transform_broadcaster.h>
+#include <std_msgs/Bool.h>
 #include <angles/angles.h>
 
 #include <iostream>
@@ -16,6 +16,7 @@ class BotController{
 private:
   ros::Subscriber pos_sub;
   ros::Publisher vel_pub;
+  ros::Publisher mov_pub;
 
   ros::ServiceServer move_goal;
 
@@ -29,42 +30,39 @@ private:
   ros::ServiceServer turn_east;
   ros::ServiceServer turn_west;
 
-  bool signbit ();
+  bool is_moving;
 
   int count, turn, multiplier;
-  int move_n, move_s, move_e, move_w;
-  int turn_n, turn_s, turn_e, turn_w;
+  int move_x, move_y;
 
   double trans_x, trans_z;
   double pos_x, pos_y, ori_z, ang_z;
   double ang_n, ang_e, ang_s, ang_w;
-  double target_x, target_y, target_o, target_r, target_z;
-  double init_r, init_ang_z, init_x, init_y;
+  double target_x, target_y, target_z, target_o;
+  double init_ang_z, init_x, init_y;
   double roll, pitch, yaw;
   double x_1, y_1, x_2, y_2;
   double change_in_x, change_in_y;
+  double shortest_angular_distance;
+  double dt, kp_z, min_z;
 
 public:
   BotController(ros::NodeHandle &nh){
     count = 0;
     turn = 0;
 
-    move_n = 0;
-    turn_n = 0;
+    kp_z = -0.8;
+    min_z = 0.4;
+    is_moving = false;
 
-    move_s = 0;
-    turn_s = 0;
-
-    move_e = 0;
-    turn_e = 0;
-
-    move_w = 0;
-    turn_w = 0;
+    move_x = 0;
+    move_y = 0;
 
     trans_x = 0;
     trans_z = 0;
     pos_sub = nh.subscribe("/odom",1,&BotController::callback, this);
     vel_pub = nh.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity",1);
+    mov_pub = nh.advertise<std_msgs::Bool>("/is_moving", 1);
 
     move_goal = nh.advertiseService("move_goal", &BotController::move_goal_callback, this);
 
@@ -89,11 +87,13 @@ public:
     ROS_INFO("requested move_north");
     target_x += 1.0;
     turn = 1;
-    turn_n = 1;
-    move_n = 1;
     printf("I want to move north\n");
     x_2 = 1.0;
-    y_2 = -1.0;
+    y_2 = 0.0;
+    target_z = 0.00;
+    move_x = 1;
+    move_y = 0;
+    is_moving = true;
     return true;
   }
 
@@ -101,11 +101,11 @@ public:
   {
     ROS_INFO("requested turn_north");
     turn = 1;
-    turn_n = 1;
     target_z = 0.00;
     printf("I want to turn to north\n");
     x_2 = 1;
     y_2 = 0;
+    is_moving = true;
     return true;
   }
 
@@ -114,11 +114,13 @@ public:
     ROS_INFO("requested movve_south");
     target_x -= 1.0;
     turn = 1;
-    turn_s = 1;
-    move_s = 1;
     printf("I want to turn and move south\n");
+    target_z = 180.00;
     x_2 = -1,0;
-    y_2 = 1.0;
+    y_2 = 0.0;
+    move_x = 1;
+    move_y = 0;
+    is_moving = true;
     return true;
   }
 
@@ -126,11 +128,11 @@ public:
   {
     ROS_INFO("requested turn_south");
     turn = 1;
-    turn_s = 1;
     printf("I want to turn to south\n");
     x_2 = -1.0;
     y_2 = 0.0;
     target_z = 180.00;
+    is_moving = true;
     return true;
   }
 
@@ -140,11 +142,13 @@ public:
     ROS_INFO("requested move_east");
     target_y -= 1.0;
     turn = 1;
-    turn_e = 1;
-    move_e = 1;
     printf("I want to turn and move east\n");
-    x_2 =  -1.0;
+    target_z = 270.00;
+    x_2 =  0.0;
     y_2 = -1.0;
+    move_x = 0;
+    move_y = 1;
+    is_moving = true;
     return true;
   }
 
@@ -152,10 +156,10 @@ public:
   {
     ROS_INFO("requested turn_east");
     turn = 1;
-    turn_e = 1;
     x_2 = 0;
     y_2 = -1;
     printf("I want to turn to east\n");
+    is_moving = true;
     target_z = 270.00;
   }
 
@@ -164,11 +168,13 @@ public:
     ROS_INFO("requested movve_west");
     target_y += 1.0;
     turn = 1;
-    turn_w = 1;
-    move_w = 1;
     printf("I want to turn and move west\n");
-    x_2 = 1.0;
+    target_z = 90.00;
+    x_2 = 0.0;
     y_2 = 1.0;
+    move_x = 0;
+    move_y = 1;
+    is_moving = true;
     return true;
   }
 
@@ -176,13 +182,12 @@ public:
   {
     ROS_INFO("requested turn_west");
     turn = 1;
-    turn_w = 1;
     x_2 = 0;
     y_2 = 1;
     printf("I want to turn to west\n");
+    is_moving = true;
     target_z = 90.00;
   }
-
 
   void callback( const nav_msgs::OdometryConstPtr& poseMsg){
     double PI_ = 3.1415;
@@ -191,11 +196,6 @@ public:
     pos_y = poseMsg->pose.pose.position.y;
     ori_z = poseMsg->pose.pose.orientation.z;
     //ang_z = ori_z*2.19;
-
-    ang_n = 0.002479;  // the value is 0
-    ang_e = -1.580881;      // the value is -1.580981
-    ang_w = 1.580981;       // the value is 1.580981
-    ang_s = -2.189983;           // the value is 2.189980 or -2.189980
     //x_1 = x_2;
     //y_1 = y_2;
     //std::cout << "x_1 =" << x_1 << '\n';
@@ -207,6 +207,7 @@ public:
 
       turn = 1; //change to 0 after testing
       multiplier = 0;
+      move_x = 0;
 
       x_1 = init_x;
       y_1 = init_y;
@@ -215,17 +216,6 @@ public:
       y_2 = init_y;
 
       target_z = 0.00;
-
-      move_n = 0;
-      move_s = 0;
-      move_e = 0;
-      move_w = 0;
-
-      turn_n = 0;
-      turn_s = 0;
-      turn_e = 0;
-      turn_w = 0;
-
 
       target_x = pos_x;
       target_y = pos_y;
@@ -242,103 +232,94 @@ public:
       tf::Matrix3x3 m(q);
       m.getRPY(roll,pitch,yaw);
       yaw = angles::normalize_angle_positive(yaw);
-      ang_z = yaw * 180/PI_;
+      ang_z = yaw * 180/M_PI;
       std::cout << "ang_z = " << ang_z << '\n';
       change_in_x = x_2 - x_1;
       change_in_y = y_2 - y_1;
-      std::cout << "change_in_x = " << change_in_x << '\n';
-      std::cout << "change_in_y = " << change_in_y << '\n';
-      //target_z = atan((y_2 - y_1)/(x_2 - x_1));
-      //std::cout << "target_z = " << target_z << '\n';
-      //std::cout << "Difference before = " << fabs(target_z - ang_z) << '\n'; //check the difference
-      if (change_in_x == 0 && change_in_y == 0)
+      //std::cout << "change_in_x = " << change_in_x << '\n';
+      //std::cout << "change_in_y = " << change_in_y << '\n';
+
+      if (change_in_x == 0 && change_in_y == 0) //Origin
       {
         std::cout << "(" << change_in_x << "," << change_in_y << ") is the origin." << "\n";
       }
 
-      /* check for point on x-axis */
       else
-      if(change_in_x == 1.0 && change_in_y == 0.0)
+      if(change_in_x == 1.0 && change_in_y == 0.0) //Traget = North
       {
         std::cout << "(" << change_in_x << "," << change_in_y << ") Target is North." << "\n";
       }
 
       else
-      if(change_in_x == -1 && change_in_y == 0.0)
+      if(change_in_x == -1 && change_in_y == 0.0) // Target = South
       {
         std::cout << "(" << change_in_x << "," << change_in_y << ") Target is South." << "\n";
       }
 
       else
-      if(change_in_y == 1 && change_in_x == 0.0)
+      if(change_in_y == 1 && change_in_x == 0.0) // Target = West
       {
         std::cout << "(" << change_in_x << "," << change_in_y << ") Target is West." << "\n";
       }
       else
 
-      if(change_in_y == -1 && change_in_x == 0)
+      if(change_in_y == -1 && change_in_x == 0) // Target = East
       {
         std::cout << "(" << change_in_x << "," << change_in_y << ") Target is East." << "\n";
       }
 
-            /* check for quadrant I */
       else
-      if(change_in_x > 0 && change_in_y < 0){
+      if(change_in_x > 0 && change_in_y < 0) /* check for quadrant I */
+      {
         std::cout <<"("<<change_in_x <<","<< change_in_y <<")is in quadrant I" <<"\n";
         target_z = 360 + (atan((y_2 - y_1)/(x_2 - x_1)) * 180/PI_);
       }
 
-      /* check for quadrant II */
       else
-      if(change_in_x > 0 && change_in_y > 0){
+      if(change_in_x > 0 && change_in_y > 0) /* check for quadrant II */
+      {
         std::cout<<"("<<change_in_x <<","<< change_in_y <<")is in quadrant II" <<"\n";
         target_z = (atan((y_2 - y_1)/(x_2 - x_1)) * 180/PI_);
       }
 
-      /* check for quadrant III */
       else
-      if(change_in_x < 0 && change_in_y > 0){
+      if(change_in_x < 0 && change_in_y > 0) /* check for quadrant III */
+      {
         std::cout<<"("<<change_in_x <<","<< change_in_y <<")is in quadrant III" <<"\n";
         target_z = 180 + (atan((y_2 - y_1)/(x_2 - x_1)) * 180/PI_);
         std::cout << "Target_z = " << target_z << '\n';
       }
 
-      /* check for quadrant IV */
       else
-      if(change_in_x < 0 && change_in_y < 0){
+      if(change_in_x < 0 && change_in_y < 0) /* check for quadrant IV */
+      {
         std::cout<<"("<<change_in_x <<","<<change_in_y <<")is in quadrant IV" <<"\n";
         target_z = 180 + (atan((y_2 - y_1)/(x_2 - x_1)) * 180/PI_);
-
       }
-      std::cout << "turn = " << turn << '\n';
-
       if(turn == 1){
         if(ang_z < target_z) {
           if(fabs(ang_z - target_z)<180.0){ //ensuring the shortest path
             //ang_z += 1.0; //anticlockwise
             multiplier = +1;
             if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.2 * multiplier; //get the correct rotation
+              trans_z = 0.35 * multiplier; //get the correct rotation
             }
             else{
-              trans_z = 0;
+              trans_z = 0.00;
               turn = 0;
-
             }
           }
           else{
             //ang_z -= 1.0; //clockwise
             multiplier = -1;
             if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.2 * multiplier; //get the correct rotation
+              trans_z = 0.35 * multiplier; //get the correct rotation
             }
             else{
               trans_z = 0;
               turn = 0;
-
             }
           }
-
         }
 
         else {
@@ -346,7 +327,7 @@ public:
             //ang_z -= 1.0; //clockwise
             multiplier = -1;
             if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.2 * multiplier; //get the correct rotation
+              trans_z = 0.35 * multiplier; //get the correct rotation
             }
             else{
               trans_z = 0;
@@ -359,7 +340,7 @@ public:
             //ang_z += 1.0; //anticlockwise
             multiplier = +1;
             if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.2 * multiplier; //get the correct rotation
+              trans_z = 0.35 * multiplier; //get the correct rotation
             }
             else{
               trans_z = 0;
@@ -371,49 +352,34 @@ public:
       }
       else{
         if(turn == 0){
-
+          std::cout << "ready to move" << '\n';
         }
       }
-
-
-
-      //if(std::signbit(target_z) == true){//this is to change the radians into the +ve number for turning
-      //target_z = target_z + (2*PI_);
-      //  std::cout << "Clockwise" << '\n';
-      //  std::cout << "Difference after = " << fabs(target_z - ang_z) << '\n';
-      //  if(fabs(target_z - ang_z) > 0.0174){
-      //    trans_z = -0.2; //this value need to be changed idk how
-      //    std::cout << "Turning to Face the Target" << '\n';
-      //  }
-      //  else{
-      //    trans_z = 0;
-      //      x_1 = x_2;
-      //    y_1 = y_2;
-      //      std::cout << "x_1 =" << x_1 << '\n';
-      //      std::cout << "y_1 =" << y_1 << '\n';
-      //    }
-
-
-      //  }
-      //  else{
-      //    std::cout << "Anticlockwise" << '\n';
-      //    if(fabs(target_z - ang_z) > 0.0174){
-      //      trans_z = 0.2; //this value need to be changed idk how
-      //      std::cout << "Turning to Face the Target" << '\n';
-      //  }
-      //    else{
-      //      trans_z = 0;
-      //    x_1 = x_2;
-      //      y_1 = y_2;
-      //      std::cout << "x_1 =" << x_1 << '\n';
-      //      std::cout << "y_1 =" << y_1 << '\n';
-      //    }
-      //  }
-
-      //std::cout << "Target_z = " << target_z << '\n';
-      //std::cout << "Ang_z = " << ang_z <<'\n';
-
-      base_cmd.linear.x = trans_x;
+      if(turn == 0 && move_x == 1 && move_y == 0){
+        if(fabs(target_x - pos_x) > 0.01){
+          trans_x = 0.4;
+        }
+        else{
+          trans_x = 0.0;
+          move_x = 0;
+          move_y = 0;
+          is_moving = false;
+        }
+      }
+      if(turn == 0 && move_y == 1 && move_x == 0){
+        if(fabs(target_y - pos_y) > 0.01){
+          trans_x = 0.4;
+        }
+        else{
+          trans_x = 0.0;
+          move_x = 0;
+          move_y = 0;
+          is_moving = false;
+        }
+      }
+      if(move_y == 1 || move_x == 1){
+        base_cmd.linear.x = trans_x;
+      }
       if(turn == 1){
         base_cmd.angular.z = trans_z;
       }
