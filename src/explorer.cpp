@@ -373,7 +373,7 @@ public:
   explorer_bot::MoveGoal getNodeGoal(int n) {
     explorer_bot::MoveGoal goal;
     goal.request.goal.x = this->nodes[n]->getPosX();
-    goal.request.goal.y = this->nodes[n]->getPosY();
+    goal.request.goal.y = -this->nodes[n]->getPosY();
     goal.request.goal.theta = 0;
     return goal;
   }
@@ -527,31 +527,35 @@ public:
     */
   }
   void find_goal() {
-    if(this->moving_flag)
-      return;
     int x = round(pos_x);
     int y = round(pos_y);
-    int z = round(yaw/1.5708);
-    double d_z = std::abs( yaw/1.5708 - z );
+    int z = round(yaw/(0.5*M_PI));
+    double d_z = std::abs( yaw/(0.5*M_PI) - z );
     int map_curr_id = this->map_size_ * x + y;
-    int map_curr_ori = int(round( -yaw/1.5708 ) + 4 ) % 4;
+    // determine robot map_ori from yaw
+    // ori: [0, 1, 2, 3] = [n, e, s, w]
+    int map_curr_ori = int(round( -yaw/(0.5*M_PI) ) + 4 ) % 4;
 
-    std::cout << "   d_x:" << std::abs(pos_x - x)
-              << " d_y:" << std::abs(pos_y - y)
-              << " d_z:" << d_z << std::endl;
-    std::cout << std::setprecision(3)
-              << "   pos_x:" << pos_x << " x:" << x
-              << " pos_y:" << pos_y << " y:" << y
-              << " ang_z:" << ang_z
-              << " yaw:" << yaw << std::endl;
-    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.05 ) {
-      // determine robot map_ori from yaw
-      // ori: [0, 1, 2, 3] = [n, e, s, w]
-      // std::cout << "   bot in the center, updating wall" << std::endl;
+    // std::cout << "   d_x:" << std::abs(pos_x - x)
+    //           << " d_y:" << std::abs(pos_y - y)
+    //           << " d_z:" << d_z << std::endl;
+    // std::cout << std::setprecision(3)
+    //           << "   pos_x:" << pos_x << " x:" << x
+    //           << " pos_y:" << pos_y << " y:" << y
+    //           << " ang_z:" << ang_z
+    //           << " yaw:" << yaw << std::endl;
+    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
+      // update wall when robot is in the center of the grid;
       std::cout << "**N[" << map_curr_id
                 << "](" << x << "," << y
                 << ") ori: " << map_curr_ori << std::endl;
       this->update_wall(map_curr_id, map_curr_ori);
+    }
+    std::cout << "-" << std::endl;
+    // if robot is moving, don't perform any search algo
+    if(this->moving_flag)
+      return;
+    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
       if( this->init_count < 6){
         switch (init_count) {
           case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
@@ -573,7 +577,7 @@ public:
     if(this->init_completed == true) {
       map_next_id = this->map.peekNextPath(map_curr_id);
       std::cout << "next = " << map_next_id
-                << "curr = " << map_curr_id << std::endl;
+                << " curr = " << map_curr_id << std::endl;
       if (map_next_id == -1) {
         this->map.solveNextStep(map_curr_id);
       }
@@ -585,20 +589,18 @@ public:
       int s = map_curr_id-this->map_size_;
       int w = map_curr_id-1;
       this->goal = this->map.getNodeGoal(map_curr_id);
-      ROS_INFO("moving now");
       if(!moving_flag) {
+        ROS_INFO("send");
         if(map_next_id == n) {
           this->move_north.call(goal);
-          moving_flag = true;
         } else if (map_next_id == e) {
           this->move_east.call(goal);
-          moving_flag = true;
-        } else if (map_next_id == e) {
+        } else if (map_next_id == s) {
           this->move_south.call(goal);
-          moving_flag = true;
-        } else if (map_next_id == e) {
+        } else if (map_next_id == w) {
           this->move_west.call(goal);
-          moving_flag = true;
+        } else {
+          ROS_INFO("not_sending");
         }
       }
     } else {
