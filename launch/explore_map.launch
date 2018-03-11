@@ -1,5 +1,5 @@
 <launch>
   <node name="wall_detector" pkg="explorer_bot" type="wall_detector" />
   <node name="controller" pkg="explorer_bot" type="bot_navigator" />
-  <node name="explorer" pkg="explorer_bot" type="explorer" />
+  <node name="explorer" pkg="explorer_bot" type="explorer" output="screen"/>
 </launch>

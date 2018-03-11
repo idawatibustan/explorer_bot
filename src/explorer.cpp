@@ -455,10 +455,10 @@ public:
     d_y = std::abs(pos_y - goal_y);
     if ( d_x < 0.2 && d_y < 0.2 ) {
       status.data = "goal";
-      goal_reached = true;
+      this->goal_reached = true;
     } else {
       status.data = "nope";
-      goal_reached = false;
+      this->goal_reached = false;
     }
 
     expl_pub.publish(status);
@@ -610,7 +610,7 @@ public:
     return;
   }
   void close() {
-    this->map.printAdj();
+    // this->map.printAdj();
     this->map.viewGraph();
   }
 };
@@ -620,16 +620,24 @@ int main(int argc, char** argv){
   ros::NodeHandle nh;
   Explorer ex(nh);
 
+  ros::Time begin = ros::Time::now();
   ros::Rate r(10);
   while (ros::ok()) {
     if (!ex.is_init_completed()) {
       ex.init_search();
     }
-    if (!ex.is_goal_reached())
+    if (!ex.is_goal_reached()) {
       ex.find_goal();
+    } else {
+
+      break;
+    }
     ros::spinOnce();
     r.sleep();
   }
+  ros::Time end = ros::Time::now();
+  double duration = (end - begin).toSec();
+  ROS_INFO("Turtlebot has reached the goal in %f seconds", duration);
   ex.close();
   return 0;
 }
