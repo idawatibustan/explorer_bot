@@ -35,10 +35,9 @@ private:
   double max_x, max_z;
 
   double trans_x, trans_z;
-  double pos_x, pos_y, ori_z, ang_z;
-  double ang_n, ang_e, ang_s, ang_w;
+  double prev_trans_x, prev_trans_z;
+  double pos_x, pos_y;
   double target_x, target_y, target_z;
-  double init_r, init_ang_z, init_x, init_y;
   double roll, pitch, yaw;
   double dx, dy, dt;
 
@@ -49,7 +48,9 @@ public:
 
     is_moving = false;
 
+    kp_x = 0.6;
     kp_z = -0.9;
+    max_x = 0.5;
     max_z = 0.5;
 
     trans_x = 0;
@@ -114,7 +115,6 @@ public:
     printf("I want to turn and move south\n");
     return true;
   }
-
   bool move_east_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_east");
@@ -126,7 +126,6 @@ public:
     printf("I want to turn and move east\n");
     return true;
   }
-
   bool move_west_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_west");
@@ -138,9 +137,7 @@ public:
     printf("I want to turn and move west\n");
     return true;
   }
-
   void callback( const nav_msgs::OdometryConstPtr& poseMsg){
-    double PI_ = 3.1415;
     geometry_msgs::Twist base_cmd;
     std_msgs::Bool moving;
     pos_x = poseMsg->pose.pose.position.x;
@@ -159,14 +156,15 @@ public:
       count = 1;
       turn = 0;
 
-
       target_x = pos_x;
       target_y = pos_y;
       target_z = yaw;
-      printf("Initialiation Done init_x = %f \n", init_x);
-      printf("Orientation of Turtlebot = %f \n", init_ang_z);
+      printf("Initialiation pose = %f, %f\n", pos_x, pos_y);
+      printf("Orientation of Turtlebot = %f \n", yaw);
     } // initialise the positition X and angular z
 
+    dx = std::abs(target_x - pos_x);
+    dy = std::abs(target_y - pos_y);
     dt = angles::shortest_angular_distance(target_z, yaw);
 
     int turn;
@@ -182,9 +180,9 @@ public:
 
     if(move_n == 1){ //flag to move north //moving in the north direction
       is_moving = true;
-      if(turn == 0){
-        if(pos_x < target_x) {
-          trans_x = 0.1; //*dist; // Change robot velocity
+      if(std::abs(dt) < 0.08){
+        if(pos_x < target_x && dx > 0.01) {
+          trans_x = kp_x * dx; //*dist; // Change robot velocity
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
         else{
@@ -200,9 +198,9 @@ public:
 
     if(move_s == 1){ //flag to move move_east
       is_moving = true;
-      if(turn == 0) {
-        if(pos_x > target_x){
-          trans_x = 0.1;//*dist; // Change robot velocity
+      if(std::abs(dt) < 0.08) {
+        if(pos_x > target_x && dx > 0.01){
+          trans_x = kp_x * dx; //*dist; // Change robot velocity
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
         else{
@@ -218,9 +216,9 @@ public:
 
     if(move_e == 1){ //flag to move move_east
       is_moving = true;
-      if(turn == 0) {
-        if(pos_y > target_y){
-          trans_x = 0.1;//*dist; // Change robot velocity
+      if(std::abs(dt) < 0.08) {
+        if(pos_y > target_y && dy > 0.01){
+          trans_x = kp_x * dy; //*dist; // Change robot velocity
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
         else{
@@ -236,9 +234,9 @@ public:
 
     if(move_w == 1){ //flag to move move_west
       is_moving = true;
-      if(turn == 0) {
-        if(pos_y < target_y){
-          trans_x = 0.1;//*dist; // Change robot velocity
+      if(std::abs(dt) < 0.08) {
+        if(pos_y < target_y && dy > 0.01){
+          trans_x = kp_x * dy; //*dist; // Change robot velocity
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
         else{
@@ -252,6 +250,13 @@ public:
       }
     }
 
+    // set maximum magnitude of trans_x
+    if( trans_x < 0 ) {
+      trans_x = std::max(-max_x, trans_x);
+    } else {
+      trans_x = std::min(trans_x, max_x);
+    }
+
     // set maximum magnitude of trans_z
     if( trans_z < 0 ) {
       trans_z = std::max(-max_z, trans_z);
@@ -259,20 +264,42 @@ public:
       trans_z = std::min(trans_z, max_z);
     }
 
-    base_cmd.linear.x = trans_x;
-    if(turn == 1){
-      base_cmd.angular.z = trans_z;
-    }
-    vel_pub.publish(base_cmd);
+    double dv_x = trans_x - prev_trans_x;
+    double dv_z = trans_z - prev_trans_z;
 
+    if ( dv_x > 0.2 ) {
+      prev_trans_x += 0.1;
+    } else {
+      prev_trans_x = trans_x;
+    }
+
+    if ( dv_z > 0.2 ) {
+      prev_trans_z += 0.1;
+    } else {
+      prev_trans_z = trans_z;
+    }
+
+    base_cmd.linear.x = prev_trans_x;
+    // if(turn == 1){
+    base_cmd.angular.z = prev_trans_z;
+    // }
+
+    vel_pub.publish(base_cmd);
     moving.data = is_moving;
     mov_pub.publish(moving);
-    std::cout<< std::setprecision(2) << std::fixed;
-    // std::cout
-    //  << " C:" << pos_x << "," << pos_y << "," << ori_z
-    // << " T:" << target_x << "," << target_y << "," << target_z
-    //  << " M:" <<  trans_x << ", " << trans_z
-    // << std::endl;
+
+    if (trans_x + std::abs(trans_z) > 0) {
+      std::cout << std::setprecision(3) << std::fixed;
+      std::cout
+      << "P:" << pos_x << "," << pos_y << "," << yaw
+      << " T:" << target_x << "," << target_y << "," << target_z
+      << " d:" << dx << "," << dy
+      << " dt:" << std::abs(dt)
+      << " v:" <<  trans_x << ", " << trans_z
+      << " dv:" <<  dv_x << ", " << dv_z
+      << " av:" <<  prev_trans_x << ", " << prev_trans_z
+      << std::endl;
+    }
 
   }
 };
