@@ -144,6 +144,10 @@ add_executable(bot_controller src/bot_controller.cpp)
 target_link_libraries(bot_controller ${catkin_LIBRARIES})
 add_dependencies(bot_controller explorer_bot_gencpp)
 
+add_executable(turn_controller src/turn_controller.cpp)
+target_link_libraries(turn_controller ${catkin_LIBRARIES})
+# add_dependencies(turn_controller explorer_bot_gencpp)
+
 add_executable(explorer src/explorer.cpp)
 target_link_libraries(explorer ${catkin_LIBRARIES})
 
