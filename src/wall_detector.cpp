@@ -104,7 +104,7 @@ class WallDetector{
                 l6 = l6 * count/(count+1) + ranges[i]/(count+1);
             }
 
-            if( fl < 0.65 && fr < 0.65 && fl != 0 && fr != 0 )
+            if ((fl < 0.65 && fr < 0.65) || (fl == 0 && fr == 0 && l5 < 0.65 && r5 < 0.65))
             {
               front_0 = true;
               wall_state.data = "1000";
