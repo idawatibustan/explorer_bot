@@ -450,7 +450,7 @@ public:
     // std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
   void mov_callback( const std_msgs::BoolConstPtr& movMsg ) {
-    this->moving_flag = movMsg.data;
+    this->moving_flag = movMsg->data;
   }
   bool is_init_completed() { return this->init_completed; }
   bool is_goal_reached() { return this->goal_reached; }
