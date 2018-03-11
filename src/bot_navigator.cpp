@@ -3,7 +3,7 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <std_srvs/Empty.h>
-
+#include <angles/angles.h>
 
 #include <iostream>
 #include <tf/tfMessage.h>
@@ -18,15 +18,12 @@ private:
   ros::Publisher vel_pub;
   ros::Publisher mov_pub;
 
+  ros::ServiceServer turn_north, turn_east, turn_south, turn_west;
+
   ros::ServiceServer move_north;
   ros::ServiceServer move_south;
   ros::ServiceServer move_east;
   ros::ServiceServer move_west;
-
-  ros::ServiceServer turn_north;
-  ros::ServiceServer turn_south;
-  ros::ServiceServer turn_east;
-  ros::ServiceServer turn_west;
 
   int count, turn;
   int move_n, move_s, move_e, move_w;
@@ -34,28 +31,20 @@ private:
 
   bool is_moving;
 
+  double kp_x, kp_z;
+
   double trans_x, trans_z;
   double pos_x, pos_y, ori_z, ang_z;
   double ang_n, ang_e, ang_s, ang_w;
-  double target_x, target_y, target_o, target_r;
+  double target_x, target_y, target_z;
   double init_r, init_ang_z, init_x, init_y;
+  double roll, pitch, yaw;
+  double dx, dy, dt;
 
 public:
   BotNavigator(ros::NodeHandle &nh){
     count = 0;
     turn = 0;
-
-    move_n = 0;
-    turn_n = 0;
-
-    move_s = 0;
-    turn_s = 0;
-
-    move_e = 0;
-    turn_e = 0;
-
-    move_w = 0;
-    turn_w = 0;
 
     is_moving = false;
 
@@ -65,101 +54,85 @@ public:
     vel_pub = nh.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity",1);
     mov_pub = nh.advertise<std_msgs::Bool>("/is_moving",1);
 
-    move_north = nh.advertiseService("move_north", &BotNavigator::move_north_callback, this);
-    move_south = nh.advertiseService("move_south", &BotNavigator::move_south_callback, this);
-    move_east = nh.advertiseService("move_east", &BotNavigator::move_east_callback, this);
-    move_west = nh.advertiseService("move_west", &BotNavigator::move_west_callback, this);
-
     turn_north = nh.advertiseService("turn_north", &BotNavigator::turn_north_callback, this);
     turn_south = nh.advertiseService("turn_south", &BotNavigator::turn_south_callback, this);
     turn_east = nh.advertiseService("turn_east", &BotNavigator::turn_east_callback, this);
     turn_west = nh.advertiseService("turn_west", &BotNavigator::turn_west_callback, this);
-  }
 
+    move_north = nh.advertiseService("move_north", &BotNavigator::move_north_callback, this);
+    move_south = nh.advertiseService("move_south", &BotNavigator::move_south_callback, this);
+    move_east = nh.advertiseService("move_east", &BotNavigator::move_east_callback, this);
+    move_west = nh.advertiseService("move_west", &BotNavigator::move_west_callback, this);
+  }
+  bool turn_north_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  {
+    ROS_INFO("requested turn_north");
+    target_z = 0.00;
+    is_moving = true;
+  }
+  bool turn_south_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  {
+    ROS_INFO("requested turn_south");
+    target_z = M_PI;
+    is_moving = true;
+  }
+  bool turn_east_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  {
+    ROS_INFO("requested turn_east");
+    target_z = 1.5 * M_PI;
+    is_moving = true;
+  }
+  bool turn_west_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  {
+    ROS_INFO("requested turn_west");
+    target_z = 0.5 * M_PI;
+    is_moving = true;
+  }
   bool move_north_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_north");
+    target_z = 0.00;
     target_x = req.goal.x + 1.0;
     turn = 1;
-    turn_n = 1;
     move_n = 1;
     is_moving = true;
     printf("I want to move north\n");
   }
-
-  bool turn_north_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
-  {
-    ROS_INFO("requested turn_north");
-    turn = 1;
-    turn_n = 1;
-    is_moving = true;
-    printf("I want to turn to north\n");
-  }
-
   bool move_south_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
-    ROS_INFO("requested movve_south");
+    ROS_INFO("requested move_south");
+    target_z = M_PI;
     target_x = req.goal.x - 1.0;
     turn = 1;
-    turn_s = 1;
     move_s = 1;
     is_moving = true;
     printf("I want to turn and move south\n");
     return true;
   }
 
-  bool turn_south_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
-  {
-    ROS_INFO("requested turn_south");
-    turn = 1;
-    turn_s = 1;
-    is_moving = true;
-    printf("I want to turn to south\n");
-  }
-
-
   bool move_east_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_east");
+    target_z = 1.5 * M_PI;
     target_y = req.goal.y - 1.0;
     turn = 1;
-    turn_e = 1;
     move_e = 1;
     is_moving = true;
     printf("I want to turn and move east\n");
     return true;
   }
 
-  bool turn_east_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
-  {
-    ROS_INFO("requested turn_east");
-    turn = 1;
-    turn_e = 1;
-    is_moving = true;
-    printf("I want to turn to east\n");
-  }
-
   bool move_west_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
-    ROS_INFO("requested movve_west");
+    ROS_INFO("requested move_west");
+    target_z = 0.5 * M_PI;
     target_y = req.goal.y + 1.0;
     turn = 1;
-    turn_w = 1;
     move_w = 1;
     is_moving = true;
     printf("I want to turn and move west\n");
     return true;
   }
-
-  bool turn_west_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
-  {
-    ROS_INFO("requested turn_west");
-    turn = 1;
-    turn_w = 1;
-    is_moving = true;
-    printf("I want to turn to west\n");
-  }
-
 
   void callback( const nav_msgs::OdometryConstPtr& poseMsg){
     double PI_ = 3.1415;
@@ -167,214 +140,111 @@ public:
     std_msgs::Bool moving;
     pos_x = poseMsg->pose.pose.position.x;
     pos_y = poseMsg->pose.pose.position.y;
-    ori_z = poseMsg->pose.pose.orientation.z;
-    ang_z = ori_z*2.19;
-
-    ang_n = 0.002479;  // the value is 0
-    ang_e = -1.580881;      // the value is -1.580981
-    ang_w = 1.580981;       // the value is 1.580981
-    ang_s = -2.189983;           // the value is 2.189980 or -2.189980
+    tf::Quaternion q(
+      poseMsg->pose.pose.orientation.x,
+      poseMsg->pose.pose.orientation.y,
+      poseMsg->pose.pose.orientation.z,
+      poseMsg->pose.pose.orientation.w
+    );
+    tf::Matrix3x3 m(q);
+    m.getRPY(roll,pitch,yaw);
+    yaw = angles::normalize_angle_positive(yaw);
 
     if(count == 0){ // initialisation process
-      init_x = poseMsg->pose.pose.position.x;
-      init_y = poseMsg->pose.pose.position.y;
-      init_ang_z = ori_z*2.19;
       count = 1;
       turn = 0;
 
-      move_n = 0;
-      move_s = 0;
-      move_e = 0;
-      move_w = 0;
-
-      turn_n = 0;
-      turn_s = 0;
-      turn_e = 0;
-      turn_w = 0;
+      kp_z = -0.9;
 
       target_x = pos_x;
       target_y = pos_y;
-      target_o = ang_z;
+      target_z = yaw;
       printf("Initialiation Done init_x = %f \n", init_x);
       printf("Orientation of Turtlebot = %f \n", init_ang_z);
-    }// initialise the positition X and angular z
+    } // initialise the positition X and angular z
+
+    dt = angles::shortest_angular_distance(target_z, yaw);
+
+    int turn;
+    if(std::abs(dt) > 0.01){
+      trans_z = kp_z * dt;
+      turn = 1;
+      is_moving = true;
+    } else {
+      trans_z = 0.00;
+      turn = 0;
+      is_moving = false;
+    }
 
     if(move_n == 1){ //flag to move north //moving in the north direction
-      if(turn_n == 1){
-        if(ang_z < ang_n){ //turning to north
-          trans_z = 0.5;
-        }
-        else{
-          trans_z = 0;
-          turn_n = 0;
-          printf("I am done facing north, my ang_z = %f\n", ang_z);
-          printf("I do not want to turn turn_n = %d\n", turn_n);
-        }
-      }
-      else
-      {
-        if(pos_x < target_x){
-          trans_x = 0.1;//*dist; // Change robot velocity
-          printf("I am Moving Forward, pose_x = %f \n", pos_x);
+      is_moving = true;
+      if(turn == 0){
+        if(pos_x < target_x) {
+          trans_x = 0.1; //*dist; // Change robot velocity
+          printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
         else{
           trans_x = 0;
           move_n = 0;
           is_moving = false;
-          printf("move_n = %d\nturn_n = %d\n", move_n, turn_n);
+          printf("move_n = %d\nturn = %d\n", move_n, turn);
         }
-      }
-    }
-
-
-    if(turn_n == 1){ //flag to turn north
-      if( fabs(ang_z) > ang_n){ //turning to north
-        trans_z = 0.5;
-      }
-      else{
-        trans_z = 0;
-        turn_n = 0;
-        is_moving = false;
-        printf("my ang_n = %f\n", ang_n);
-        printf("I am done facing north, my ang_z = %f\n", ang_z);
-        printf("I do not want to turn turn_n = %d\n", turn_n);
+      } else {
+        trans_x = 0;
       }
     }
 
     if(move_s == 1){ //flag to move move_east
-      if(turn_s == 1){
-        if(ang_z > ang_s){
-          trans_z = -0.5;
-          printf("I am Turning South\n");
-          printf("My ang_z = %f\n", ang_z);
-        }
-        else{
-          trans_z = 0;
-          turn_s = 0;
-          printf("I am done facing south, my ang_z = %f\n", ang_z);
-          printf("I do not want to turn turn_s = %d\n", turn_s);
-        }
-      }
-      else{
+      is_moving = true;
+      if(turn == 0) {
         if(pos_x > target_x){
           trans_x = 0.1;//*dist; // Change robot velocity
-          printf("I am Moving Forward, pose_y = %f \n", pos_y);
-          printf("init_y = %f \n", init_y);
+          printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
         else{
           trans_x = 0;
           move_s = 0;
           is_moving = false;
-          printf("move_s = %d\nturn_s = %d\n", move_s, turn_s);
+          printf("move_s = %d\nturn = %d\n", move_s, turn);
         }
+      } else {
+        trans_x = 0;
       }
     }
-
-
-    if(turn_s == 1){ //flag to turn to south
-      if(ang_z > ang_s){
-        trans_z = -0.5;
-        printf("I am Turning South\n");
-        printf("My ang_z = %f\n", ang_z);
-      }
-      else{
-        trans_z = 0;
-        turn_s = 0;
-        is_moving = false;
-        printf("I am done facing south, my ang_z = %f\n", ang_z);
-        printf("I do not want to turn turn_s = %d\n", turn_s);
-      }
-    }
-
 
     if(move_e == 1){ //flag to move move_east
-      if(turn_e == 1){
-        if(ang_z > ang_e){
-          trans_z = -0.5;
-          printf("I am Turning\n");
-          printf("My ang_z = %f\n", ang_z);
-        }
-        else{
-          trans_z = 0;
-          turn_e = 0;
-          printf("I am done facing east my ang_z = %f\n", ang_z);
-          printf("I do not want to turn turn_e = %d\n", turn_e);
-        }
-      }
-      else{
+      is_moving = true;
+      if(turn == 0) {
         if(pos_y > target_y){
           trans_x = 0.1;//*dist; // Change robot velocity
-          printf("I am Moving Forward, pose_y = %f \n", pos_y);
-          printf("init_y = %f \n", init_y);
+          printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
         else{
           trans_x = 0;
           move_e = 0;
           is_moving = false;
-          printf("move_e = %d\nturn_e = %d\n", move_e, turn_e);
+          printf("move_e = %d\n turn = %d\n", move_e, turn);
         }
-      }
-    }
-
-
-    if(turn_e == 1){
-      if(ang_z > ang_e){
-        trans_z = -0.5;
-        printf("I am Turning\n");
-        printf("My ang_z = %f\n", ang_z);
-      }
-      else{
-        trans_z = 0;
-        turn_e = 0;
-        is_moving = false;
-        printf("my ang_e = %f\n", ang_e);
-        printf("I am done facing east my ang_z = %f\n", ang_z);
-        printf("I do not want to turn turn_e = %d\n", turn_e);
+      } else {
+        trans_x = 0;
       }
     }
 
     if(move_w == 1){ //flag to move move_west
-      if(turn_w == 1){
-        if(ang_z < ang_w){
-          trans_z = 0.5;
-          printf("I am Turning West\n");
-          printf("My ang_z = %f\n", ang_z);
-        }
-        else{
-          trans_z = 0;
-          turn_w = 0;
-          printf("I am done facing west, my ang_z = %f\n", ang_z);
-          printf("I do not want to turn turn_w = %d\n", turn_w);
-        }
-      }
-      else{
+      is_moving = true;
+      if(turn == 0) {
         if(pos_y < target_y){
           trans_x = 0.1;//*dist; // Change robot velocity
-          printf("I am Moving Forward, pose_y = %f \n", pos_y);
-          printf("init_y = %f \n", init_y);
+          printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
         else{
           trans_x = 0;
           move_w = 0;
           is_moving = false;
-          printf("move_s = %d\nturn_s = %d\n", move_w, turn_w);
+          printf("move_s = %d\nturn = %d\n", move_w, turn);
         }
-      }
-    }
-
-    if(turn_w == 1){
-      if(ang_z < ang_w){
-        trans_z = 0.5;
-        printf("I am Turning West\n");
-        printf("My ang_z = %f\n", ang_z);
-      }
-      else{
-        trans_z = 0;
-        turn_w = 0;
-        is_moving = false;
-        printf("my ang_w = %f\n", ang_w);
-        printf("I am done facing west, my ang_z = %f\n", ang_z);
-        printf("I do not want to turn turn_w = %d\n", turn_w);
+      } else {
+        trans_x = 0;
       }
     }
 
@@ -387,10 +257,11 @@ public:
     moving.data = is_moving;
     mov_pub.publish(moving);
     std::cout<< std::setprecision(2) << std::fixed;
-    //std::cout << poseMsg->header.stamp
+    // std::cout
     //  << " C:" << pos_x << "," << pos_y << "," << ori_z
-    //  << " T:" << target_x << "," << target_y << "," << target_o
-    //  << " M:" <<  trans_x << ", " << trans_z << std::endl;
+    // << " T:" << target_x << "," << target_y << "," << target_z
+    //  << " M:" <<  trans_x << ", " << trans_z
+    // << std::endl;
 
   }
 };
