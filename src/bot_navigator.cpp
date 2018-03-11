@@ -10,6 +10,8 @@
 #include <tf/transform_datatypes.h>
 #include <cmath>
 
+#include <explorer_bot/MoveGoal.h>
+
 class BotNavigator{
 private:
   ros::Subscriber pos_sub;
@@ -74,10 +76,10 @@ public:
     turn_west = nh.advertiseService("turn_west", &BotNavigator::turn_west_callback, this);
   }
 
-  bool move_north_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_north_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_north");
-    target_x += 1.0;
+    target_x = req.goal.x + 1.0;
     turn = 1;
     turn_n = 1;
     move_n = 1;
@@ -94,10 +96,10 @@ public:
     printf("I want to turn to north\n");
   }
 
-  bool move_south_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_south_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested movve_south");
-    target_x -= 1.0;
+    target_x = req.goal.x - 1.0;
     turn = 1;
     turn_s = 1;
     move_s = 1;
@@ -116,10 +118,10 @@ public:
   }
 
 
-  bool move_east_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_east_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_east");
-    target_y -= 1.0;
+    target_y = req.goal.y - 1.0;
     turn = 1;
     turn_e = 1;
     move_e = 1;
@@ -137,10 +139,10 @@ public:
     printf("I want to turn to east\n");
   }
 
-  bool move_west_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_west_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested movve_west");
-    target_y += 1.0;
+    target_y = req.goal.y + 1.0;
     turn = 1;
     turn_w = 1;
     move_w = 1;

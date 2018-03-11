@@ -499,9 +499,6 @@ public:
       this->map.printAdj();
     }
   }
-  void add_init_frontier(){
-
-  }
   void init_search() {
     if(this->moving_flag)
       return;
@@ -539,19 +536,19 @@ public:
     int map_curr_id = this->map_size_ * x + y;
     int map_curr_ori = int(round( -yaw/1.5708 ) + 4 ) % 4;
 
-    // std::cout << "   d_x:" << std::abs(pos_x - x)
-    //           << " d_y:" << std::abs(pos_y - y)
-    //           << " d_z:" << d_z << std::endl;
-    // std::cout << std::setprecision(3)
-    //           << "   pos_x:" << pos_x << " x:" << x
-    //           << " pos_y:" << pos_y << " y:" << y
-    //           << " ang_z:" << ang_z
-    //           << " yaw:" << yaw << std::endl;
+    std::cout << "   d_x:" << std::abs(pos_x - x)
+              << " d_y:" << std::abs(pos_y - y)
+              << " d_z:" << d_z << std::endl;
+    std::cout << std::setprecision(3)
+              << "   pos_x:" << pos_x << " x:" << x
+              << " pos_y:" << pos_y << " y:" << y
+              << " ang_z:" << ang_z
+              << " yaw:" << yaw << std::endl;
     if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.05 ) {
       // determine robot map_ori from yaw
       // ori: [0, 1, 2, 3] = [n, e, s, w]
       // std::cout << "   bot in the center, updating wall" << std::endl;
-      std::cout << "N[" << map_curr_id
+      std::cout << "**N[" << map_curr_id
                 << "](" << x << "," << y
                 << ") ori: " << map_curr_ori << std::endl;
       this->update_wall(map_curr_id, map_curr_ori);
