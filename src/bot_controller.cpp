@@ -194,6 +194,7 @@ public:
   void callback( const nav_msgs::OdometryConstPtr& poseMsg){
     double PI_ = 3.1415;
     geometry_msgs::Twist base_cmd;
+    std_msgs::Bool moving;
     pos_x = poseMsg->pose.pose.position.x;
     pos_y = poseMsg->pose.pose.position.y;
     ori_z = poseMsg->pose.pose.orientation.z;
@@ -303,11 +304,11 @@ public:
             if(fabs(target_z - ang_z) > 0.01){
               if((trans_z = (fabs(target_z-ang_z) * multiplier))> 0.05){
                 trans_z = std::min(0.5, trans_z); //get the correct rotation
-                printf("Too MUCH Trans_z, trans_z = %f\n", trans_z);
+                //printf("Trans_z, trans_z = %f\n", trans_z);
               }
               else{
                 trans_z = fabs(target_z-ang_z) * multiplier;
-                printf("trans_z = %f\n", trans_z);
+                //printf("trans_z = %f\n", trans_z);
               }
 
             }
@@ -322,11 +323,11 @@ public:
             if(fabs(target_z - ang_z) > 0.01){
               if((trans_z =(fabs(target_z-ang_z) * fabs(multiplier))) > 0.05){
                 trans_z = std::max(-0.5, -trans_z); //get the correct rotation
-                printf("trans_z = %f\n", trans_z);
+                //printf("trans_z = %f\n", trans_z);
               }
               else{
                 trans_z = fabs(target_z-ang_z) * multiplier;
-                printf("trans_z = %f\n", trans_z);
+                //printf("trans_z = %f\n", trans_z);
               }
             }
             else{
@@ -385,6 +386,8 @@ public:
       if(turn == 0 && move_x == 1 && move_y == 0){
         if(fabs(target_x - pos_x) > 0.01){
           trans_x = 0.3;
+          std::cout << "Moving X target_z = " << target_z << '\n';
+          std::cout << "Ang_z = " << ang_z <<'\n';
         }
         else{
           trans_x = 0.0;
@@ -396,6 +399,8 @@ public:
       if(turn == 0 && move_y == 1 && move_x == 0){
         if(fabs(target_y - pos_y) > 0.01){
           trans_x = 0.3;
+          std::cout << "Moving Y target_z = " << target_z << '\n';
+          std::cout << "Ang_z = " << ang_z <<'\n';
         }
         else{
           trans_x = 0.0;
@@ -404,13 +409,18 @@ public:
           is_moving = false;
         }
       }
+      std::cout << "Pos_x = " << pos_x <<'\n';
+      std::cout << "Pos_y = " << pos_y <<'\n';
+
       if(move_y == 1 || move_x == 1){
         base_cmd.linear.x = trans_x;
       }
-      if(turn == 1){
+      if(turn == 1 || turn == 0){
         base_cmd.angular.z = trans_z;
       }
       vel_pub.publish(base_cmd);
+      moving.data = is_moving;
+      mov_pub.publish(moving);
       std::cout<< std::setprecision(5) << std::fixed;
       //std::cout << poseMsg->header.stamp
       //  << " C:" << pos_x << "," << pos_y << "," << ori_z
