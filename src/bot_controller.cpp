@@ -315,6 +315,7 @@ public:
             else{
               trans_z = 0.00;
               turn = 0;
+              is_moving = false;
             }
           }
           else{
@@ -333,6 +334,7 @@ public:
             else{
               trans_z = 0.0;
               turn = 0;
+              is_moving = false;
             }
           }
         }
@@ -354,6 +356,7 @@ public:
             else{
               trans_z = 0.0;
               turn = 0;
+              is_moving = false;
 
             }
           } //ensuring the shortest path
@@ -373,6 +376,7 @@ public:
             else{
               trans_z = 0.0;
               turn = 0;
+              is_moving = false;
 
             }
           }
