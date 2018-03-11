@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <queue>
 #include <string>
 #include <vector>
 
@@ -66,10 +67,11 @@ public:
   void mark_visited() {
     this->visited = true;
   }
-  bool operator(const Node& a, const Node& b) {
-    return a.getF() > b.getF();
+  bool operator<(const Node &b) {
+    return this->f_ < b.f_;
   }
 };
+
 
 class Graph{
 private:
@@ -134,6 +136,12 @@ private:
   bool is_generated;
   std::map<int, Node*> nodes;
   std::vector<int> path;
+
+  int* closed_nodes;
+  // int* open_nodes;
+  // std::priority_queue<Node> frontier;
+  // int fi;
+
 public:
   Map(int size, const Position &goal, const Position &init)
   : goal_(goal), init_(init), curr_(init), graph(size*size) {
@@ -143,6 +151,14 @@ public:
     this->id_curr = size * this->curr_.getX() + this->curr_.getY();
     this->path.push_back(this->id_init);
     this->is_generated = false;
+    this->closed_nodes = new int[size*size];
+    // this->open_nodes = new int[size*size];
+    this->fi = 0;
+
+    for(int i=0; i<size*size; i++) {
+      this->closed_nodes[i] = 0;
+      // this->open_nodes[i] = 0;
+    }
     print();
   }
   Map()
@@ -153,6 +169,14 @@ public:
     this->id_curr = this->size_ * this->curr_.getX() + this->curr_.getY();
     this->path.push_back(this->id_init);
     this->is_generated = false;
+    this->closed_nodes = new int[81];
+    // this->open_nodes = new int[81];
+    this->fi = 0;
+
+    for(int i=0; i<81; i++) {
+      this->closed_nodes[i] = 0;
+      // this->open_nodes[i] = 0;
+    }
     print();
   }
   void print() {
@@ -240,7 +264,7 @@ public:
   }
   bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
-    std::cout << "WALL self " << ori
+    std::cout << "WALL self " << id << ">" << ori
               << " front:" << wall_front << std::endl;
     bool wall_change = false;
     if(wall_front) {
@@ -259,9 +283,9 @@ public:
     return wall_change;
   }
   bool updateEdge(int id, int ori, bool wall_left, bool wall_front, bool wall_right){
-    std::cout << "WALL front " << ori
+    std::cout << " --> WALL front " << id << ">" << ori
               << " walls:" << wall_left << wall_front << wall_right << std::endl;
-    bool left_change, front_change, right_change;
+    bool left_change=false, front_change=false, right_change=false;
     if(wall_left) {
       switch(ori) {
         case 0 : left_change = this->removeWest(id); break;
@@ -287,7 +311,7 @@ public:
       }
     }
     if(left_change || front_change || right_change){
-      std::cout << "updating edge, wall_changed" << std::endl;
+      std::cout << "updating edge, wall_changed" << left_change << front_change << right_change << std::endl;
     } else {
       std::cout << "no change" << std::endl;
     }
@@ -310,7 +334,7 @@ public:
       << "] h=" << std::setw(5) << n_temp->getH()
       << " f=" << std::setw(5) << n_temp->getF() << std::endl;
       // if lower than min, update min f(n) & index
-      if(n_temp->getF() < min_f){
+      if(n_temp->getF() < min_f && closed_nodes[n_temp->getId()] == 0){
         min_f = n_temp->getF();
         n_min = n_temp;
       }
@@ -320,6 +344,7 @@ public:
     << " min f(n)=" << std::setw(5) << n_min->getF()
     << std::endl << std::endl;
     // return node index with the lowest f(n)
+    this->closed_nodes[n_min->getId()] = 1;
     return n_min->getId();
   }
   void solveMap() {
@@ -363,15 +388,15 @@ int main()
   m2.removeEast(0);
   m2.removeWest(10);
   m2.removeSouth(30);
-  // m2.removeNorth(22);
+  m2.removeNorth(22);
   // m2.removeWest(22);
-  m2.updateEdge(20, 1, true);
-  m2.updateEdge(20, 1, true);
+  // m2.updateEdge(20, 1, true);
+  // m2.updateEdge(20, 1, true);
   m2.updateEdge(22, 0, true, true, false);
   // m2.printAdj();
 
   std::cout << "solving map..." << std::endl;
   m2.solveMap();
-  // m2.viewGraph();
+  m2.viewGraph();
 
 }
