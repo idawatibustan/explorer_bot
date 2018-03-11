@@ -528,15 +528,16 @@ public:
                 << "](" << x << "," << y
                 << ") ori: " << map_curr_ori << std::endl;
       this->update_wall(map_curr_id, map_curr_ori);
-      if( this->init_count < 5){
+      if( this->init_count < 6){
         switch (init_count) {
           case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
           case 1: this->init_count = (map_curr_ori == 1) ? 2 : 1; break;
           case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
           case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
-          case 4: ROS_INFO("CASE 4 REACHED");
+          case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4;
                   this->init_completed = true;
-                  this->init_count++;
+                  break;
+          case 5: this->init_count++;
                   this->map.solveNextStep(map_curr_id);
                   break;
         }

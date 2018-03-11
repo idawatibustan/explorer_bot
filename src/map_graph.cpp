@@ -66,6 +66,9 @@ public:
   void mark_visited() {
     this->visited = true;
   }
+  bool operator(const Node& a, const Node& b) {
+    return a.getF() > b.getF();
+  }
 };
 
 class Graph{
