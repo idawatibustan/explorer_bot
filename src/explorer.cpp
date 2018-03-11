@@ -13,6 +13,8 @@
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_broadcaster.h>
 
+#include <explorer_bot/MoveGoal.h>
+
 class Position{
 private:
   int x_, y_;
@@ -88,8 +90,8 @@ public:
   bool doesEdgeExist(int a, int b){
     bool b_in_a = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
     bool a_in_b = (std::find(adj[b].begin(), adj[b].end(), a) != adj[b].end());
-    std::cout << "check if exist b_in_a: " << b_in_a
-              << " a_in_b: " << a_in_b << std::endl;
+    // std::cout << "check if exist b_in_a: " << b_in_a
+    //           << " a_in_b: " << a_in_b << std::endl;
     return b_in_a && a_in_b;
   }
   void addEdge(int a, int b){
@@ -100,7 +102,6 @@ public:
     }
   }
   bool removeEdge(int a, int b){
-    std::cout << "removing " << a << "," << b << std::endl;
     if(doesEdgeExist(a, b)) {
       std::cout << "removing " << a << "," << b << std::endl;
       edge_count--;
@@ -275,8 +276,8 @@ public:
     }
     if(wall_change) {
       std::cout << "updating edge, wall_changed" << std::endl;
-    } else {
-      std::cout << "no change" << std::endl;
+    // } else {
+    //   std::cout << "no change" << std::endl;
     }
     return wall_change;
   }
@@ -310,13 +311,14 @@ public:
     }
     if(left_change || front_change || right_change){
       std::cout << "updating edge, wall_changed" << left_change << front_change << right_change << std::endl;
-    } else {
-      std::cout << "no change" << std::endl;
+    // } else {
+    //   std::cout << "no change" << std::endl;
     }
     return left_change || front_change || right_change;
   }
   int solveNextStep(int n) {
     // get current node g(n) + 1 for next step
+    std::cout << "solving node: " << n << std::endl;
     double g_n = this->nodes[n]->getG() + 1;
     // initialize min value
     double min_f = 1000.0;
@@ -324,13 +326,14 @@ public:
 
     std::cout << std::setprecision(2) << std::fixed;
     // iterate through the node neighbors
-    for(int &i: this->graph.getEdges(id_curr)){
+    for(int &i: this->graph.getEdges(n)){
       Node* n_temp = this->nodes[i];
       // update actual cost g(n)
       n_temp->setG(g_n);
       std::cout << "  node[" << std::setw(2) << i
       << "] h=" << std::setw(5) << n_temp->getH()
-      << " f=" << std::setw(5) << n_temp->getF() << std::endl;
+      << " f=" << std::setw(5) << n_temp->getF()
+      << " c?" << closed_nodes[n_temp->getId()] << std::endl;
       // if lower than min, update min f(n) & index
       if(n_temp->getF() < min_f && closed_nodes[n_temp->getId()] == 0){
         min_f = n_temp->getF();
@@ -343,6 +346,7 @@ public:
     << std::endl << std::endl;
     // return node index with the lowest f(n)
     this->closed_nodes[n_min->getId()] = 1;
+    this->path.push_back(n_min->getId());
     return n_min->getId();
   }
   void solveMap() {
@@ -364,7 +368,14 @@ public:
         getNext = true;
       }
     }
-    return 0;
+    return -1;
+  }
+  explorer_bot::MoveGoal getNodeGoal(int n) {
+    explorer_bot::MoveGoal goal;
+    goal.request.goal.x = this->nodes[n]->getPosX();
+    goal.request.goal.y = this->nodes[n]->getPosY();
+    goal.request.goal.theta = 0;
+    return goal;
   }
 };
 
@@ -376,7 +387,8 @@ private:
 
   ros::ServiceClient turn_north, turn_east, turn_south, turn_west;
   ros::ServiceClient move_north, move_east, move_south, move_west;
-  std_srvs::Empty srv;
+  std_srvs::Empty esrv;
+  explorer_bot::MoveGoal goal;
 
   double pos_x, pos_y, ori_z, ang_z;
   double roll, pitch, yaw;
@@ -421,14 +433,14 @@ public:
     turn_south = nh.serviceClient<std_srvs::Empty>("/turn_south");
     turn_west = nh.serviceClient<std_srvs::Empty>("/turn_west");
 
-    move_north = nh.serviceClient<std_srvs::Empty>("/move_north");
-    move_east = nh.serviceClient<std_srvs::Empty>("/move_east");
-    move_south = nh.serviceClient<std_srvs::Empty>("/move_south");
-    move_west = nh.serviceClient<std_srvs::Empty>("/move_west");
+    move_north = nh.serviceClient<explorer_bot::MoveGoal>("/move_north");
+    move_east = nh.serviceClient<explorer_bot::MoveGoal>("/move_east");
+    move_south = nh.serviceClient<explorer_bot::MoveGoal>("/move_south");
+    move_west = nh.serviceClient<explorer_bot::MoveGoal>("/move_west");
   }
   void odom_callback( const nav_msgs::OdometryConstPtr& poseMsg ) {
     pos_x = poseMsg->pose.pose.position.x;
-    pos_y = poseMsg->pose.pose.position.y;
+    pos_y = -poseMsg->pose.pose.position.y;
     ori_z = poseMsg->pose.pose.orientation.z;
     ang_z = ori_z*2.19;
 
@@ -497,16 +509,16 @@ public:
       case 0: ROS_INFO("Updating 1st wall");
               break;
       case 1: ROS_INFO("Updating 2nd wall");
-              this->turn_east.call(srv);
+              this->turn_east.call(esrv);
               break;
       case 2: ROS_INFO("Updating 3rd wall");
-              this->turn_south.call(srv);
+              this->turn_south.call(esrv);
               break;
       case 3: ROS_INFO("Updating 3rd wall");
-              this->turn_west.call(srv);
+              this->turn_west.call(esrv);
               break;
       case 4: ROS_INFO("Back to initial state");
-              this->turn_north.call(srv);
+              this->turn_north.call(esrv);
               break;
     }
     /*
@@ -546,37 +558,49 @@ public:
       if( this->init_count < 6){
         switch (init_count) {
           case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
-          case 1: this->init_count = (map_curr_ori == 1) ? 2 : 1; break;
+          case 1: this->init_count = (map_curr_ori == 1) ? 4 : 1; break;
           case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
           case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
           case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4;
-                  this->init_completed = true;
                   break;
           case 5: this->init_count++;
+                  this->init_completed = true;
                   this->map.solveNextStep(map_curr_id);
+                  ROS_INFO("trying to solve next");
                   break;
         }
       }
     }
-    int map_next_id = this->map.peekNextPath(map_curr_id);
+
+    int map_next_id = map_curr_id;
+    if(this->init_completed == true) {
+      map_next_id = this->map.peekNextPath(map_curr_id);
+      std::cout << "next = " << map_next_id
+                << "curr = " << map_curr_id << std::endl;
+      if (map_next_id == -1) {
+        this->map.solveNextStep(map_curr_id);
+      }
+    }
     if(map_curr_id != map_next_id){
       ROS_INFO("MOVE!!! %d -> %d", map_curr_id, map_next_id);
       int n = map_curr_id+this->map_size_;
       int e = map_curr_id+1;
       int s = map_curr_id-this->map_size_;
       int w = map_curr_id-1;
+      this->goal = this->map.getNodeGoal(map_curr_id);
+      ROS_INFO("moving now");
       if(!moving_flag) {
         if(map_next_id == n) {
-          this->move_north.call(srv);
+          this->move_north.call(goal);
           moving_flag = true;
         } else if (map_next_id == e) {
-          this->move_east.call(srv);
+          this->move_east.call(goal);
           moving_flag = true;
         } else if (map_next_id == e) {
-          this->move_south.call(srv);
+          this->move_south.call(goal);
           moving_flag = true;
         } else if (map_next_id == e) {
-          this->move_west.call(srv);
+          this->move_west.call(goal);
           moving_flag = true;
         }
       }
