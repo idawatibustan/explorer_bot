@@ -233,7 +233,7 @@ public:
       m.getRPY(roll,pitch,yaw);
       yaw = angles::normalize_angle_positive(yaw);
       ang_z = yaw * 180/M_PI;
-      std::cout << "ang_z = " << ang_z << '\n';
+      //std::cout << "ang_z = " << ang_z << '\n';
       change_in_x = x_2 - x_1;
       change_in_y = y_2 - y_1;
       //std::cout << "change_in_x = " << change_in_x << '\n';
@@ -287,7 +287,6 @@ public:
       {
         std::cout<<"("<<change_in_x <<","<< change_in_y <<")is in quadrant III" <<"\n";
         target_z = 180 + (atan((y_2 - y_1)/(x_2 - x_1)) * 180/PI_);
-        std::cout << "Target_z = " << target_z << '\n';
       }
 
       else
@@ -302,9 +301,9 @@ public:
             //ang_z += 1.0; //anticlockwise
             multiplier = +0.04;
             if(fabs(target_z - ang_z) > 0.01){
-              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
-                trans_z = std::max(0.7, -trans_z); //get the correct rotation
-                printf("trans_z = %f\n", trans_z);
+              if((trans_z = (fabs(target_z-ang_z) * multiplier))> 0.05){
+                trans_z = std::min(0.5, trans_z); //get the correct rotation
+                printf("Too MUCH Trans_z, trans_z = %f\n", trans_z);
               }
               else{
                 trans_z = fabs(target_z-ang_z) * multiplier;
@@ -321,8 +320,8 @@ public:
             //ang_z -= 1.0; //clockwise
             multiplier = -0.04;
             if(fabs(target_z - ang_z) > 0.01){
-              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
-                trans_z = std::max(0.7, -trans_z); //get the correct rotation
+              if((trans_z =(fabs(target_z-ang_z) * fabs(multiplier))) > 0.05){
+                trans_z = std::max(-0.5, -trans_z); //get the correct rotation
                 printf("trans_z = %f\n", trans_z);
               }
               else{
@@ -342,8 +341,8 @@ public:
             //ang_z -= 1.0; //clockwise
             multiplier = -0.04;
             if(fabs(target_z - ang_z) > 0.01){
-              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
-                trans_z = std::max(0.7, -trans_z); //get the correct rotation
+              if((trans_z =(fabs(target_z-ang_z) * fabs(multiplier))) > 0.05){
+                trans_z = std::max(-0.5, -trans_z); //get the correct rotation
                 printf("trans_z = %f\n", trans_z);
               }
               else{
@@ -361,8 +360,8 @@ public:
           else{ //ensuring the shortest path
             multiplier = +0.04;
             if(fabs(target_z - ang_z) > 0.01){
-              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
-                trans_z = std::max(0.7, -trans_z); //get the correct rotation
+              if((trans_z = (fabs(target_z-ang_z) * multiplier)) > 0.05){
+                trans_z = std::min(0.5, trans_z); //get the correct rotation
                 printf("trans_z = %f\n", trans_z);
               }
               else{
