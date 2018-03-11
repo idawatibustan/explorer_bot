@@ -10,10 +10,15 @@
 #include <tf/transform_datatypes.h>
 #include <cmath>
 
+#include <explorer_bot/MoveGoal.h>
+
 class BotController{
 private:
   ros::Subscriber pos_sub;
   ros::Publisher vel_pub;
+
+  ros::ServiceServer move_goal;
+
   ros::ServiceServer move_north;
   ros::ServiceServer move_south;
   ros::ServiceServer move_east;
@@ -60,6 +65,8 @@ public:
     pos_sub = nh.subscribe("/odom",1,&BotController::callback, this);
     vel_pub = nh.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity",1);
 
+    move_goal = nh.advertiseService("move_goal", &BotController::move_goal_callback, this);
+
     move_north = nh.advertiseService("move_north", &BotController::move_north_callback, this);
     move_south = nh.advertiseService("move_south", &BotController::move_south_callback, this);
     move_east = nh.advertiseService("move_east", &BotController::move_east_callback, this);
@@ -69,6 +76,11 @@ public:
     turn_south = nh.advertiseService("turn_south", &BotController::turn_south_callback, this);
     turn_east = nh.advertiseService("turn_east", &BotController::turn_east_callback, this);
     turn_west = nh.advertiseService("turn_west", &BotController::turn_west_callback, this);
+  }
+
+  bool move_goal_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
+  {
+    ROS_INFO("requested move_goal");
   }
 
   bool move_north_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )

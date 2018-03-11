@@ -9,7 +9,7 @@ add_compile_options(-std=c++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-	std_msgs
+	geometry_msgs
 	message_generation
 )
 
@@ -67,10 +67,10 @@ add_service_files(
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  geometry_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -139,6 +139,10 @@ target_link_libraries(wall_detector ${catkin_LIBRARIES})
 
 add_executable(bot_navigator src/bot_navigator.cpp)
 target_link_libraries(bot_navigator ${catkin_LIBRARIES})
+
+add_executable(bot_controller src/bot_controller.cpp)
+target_link_libraries(bot_controller ${catkin_LIBRARIES})
+add_dependencies(bot_controller explorer_bot_gencpp)
 
 add_executable(explorer src/explorer.cpp)
 target_link_libraries(explorer ${catkin_LIBRARIES})
