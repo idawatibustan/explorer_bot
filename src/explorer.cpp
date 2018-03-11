@@ -138,7 +138,10 @@ private:
   bool is_generated;
   std::map<int, Node*> nodes;
   std::vector<int> path;
-  std::stack<int> dfs_stack;
+
+  int* closed_nodes;
+  // int* open_nodes;
+
 public:
   Map(int size, const Position &goal, const Position &init)
   : goal_(goal), init_(init), curr_(init), graph(size*size) {
@@ -147,8 +150,14 @@ public:
     this->id_init = size * this->init_.getX() + this->init_.getY();
     this->id_curr = size * this->curr_.getX() + this->curr_.getY();
     this->path.push_back(this->id_init);
-    this->dfs_stack.push(this->id_init);
     this->is_generated = false;
+    this->closed_nodes = new int[size*size];
+    // this->open_nodes = new int[size*size];
+
+    for(int i=0; i<size*size; i++) {
+      this->closed_nodes[i] = 0;
+      // this->open_nodes[i] = 0;
+    }
     print();
   }
   Map()
@@ -158,8 +167,14 @@ public:
     this->id_init = this->size_ * this->init_.getX() + this->init_.getY();
     this->id_curr = this->size_ * this->curr_.getX() + this->curr_.getY();
     this->path.push_back(this->id_init);
-    this->dfs_stack.push(this->id_init);
     this->is_generated = false;
+    this->closed_nodes = new int[81];
+    // this->open_nodes = new int[81];
+
+    for(int i=0; i<81; i++) {
+      this->closed_nodes[i] = 0;
+      // this->open_nodes[i] = 0;
+    }
     print();
   }
   void print() {
@@ -317,7 +332,7 @@ public:
       << "] h=" << std::setw(5) << n_temp->getH()
       << " f=" << std::setw(5) << n_temp->getF() << std::endl;
       // if lower than min, update min f(n) & index
-      if(n_temp->getF() < min_f){
+      if(n_temp->getF() < min_f && closed_nodes[n_temp->getId()] == 0){
         min_f = n_temp->getF();
         n_min = n_temp;
       }
@@ -327,7 +342,7 @@ public:
     << " min f(n)=" << std::setw(5) << n_min->getF()
     << std::endl << std::endl;
     // return node index with the lowest f(n)
-    path.push_back(n_min->getId());
+    this->closed_nodes[n_min->getId()] = 1;
     return n_min->getId();
   }
   void solveMap() {
