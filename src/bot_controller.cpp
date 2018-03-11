@@ -32,8 +32,10 @@ private:
 
   bool is_moving;
 
-  int count, turn, multiplier;
+  int count, turn;
   int move_x, move_y;
+
+  double multiplier;
 
   double trans_x, trans_z;
   double pos_x, pos_y, ori_z, ang_z;
@@ -51,7 +53,6 @@ public:
     count = 0;
     turn = 0;
 
-    kp_z = -0.8;
     min_z = 0.4;
     is_moving = false;
 
@@ -82,10 +83,10 @@ public:
     ROS_INFO("requested move_goal");
   }
 
-  bool move_north_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_north_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_north");
-    target_x += 1.0;
+    target_x = req.goal.x + 1.0;
     turn = 1;
     printf("I want to move north\n");
     x_2 = 1.0;
@@ -109,10 +110,10 @@ public:
     return true;
   }
 
-  bool move_south_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_south_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested movve_south");
-    target_x -= 1.0;
+    target_x = req.goal.x - 1.0;
     turn = 1;
     printf("I want to turn and move south\n");
     target_z = 180.00;
@@ -123,6 +124,7 @@ public:
     is_moving = true;
     return true;
   }
+
 
   bool turn_south_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
   {
@@ -137,10 +139,10 @@ public:
   }
 
 
-  bool move_east_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_east_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_east");
-    target_y -= 1.0;
+    target_y = req.goal.y - 1.0;
     turn = 1;
     printf("I want to turn and move east\n");
     target_z = 270.00;
@@ -163,10 +165,10 @@ public:
     target_z = 270.00;
   }
 
-  bool move_west_callback( std_srvs::Empty::Request& req, std_srvs::Empty::Response& res )
+  bool move_west_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested movve_west");
-    target_y += 1.0;
+    target_y = req.goal.y + 1.0;
     turn = 1;
     printf("I want to turn and move west\n");
     target_z = 90.00;
@@ -203,7 +205,6 @@ public:
     if(count == 0){ // initialisation process
       init_x = poseMsg->pose.pose.position.x;
       init_y = poseMsg->pose.pose.position.y;
-      init_ang_z = ori_z*2.19;
 
       turn = 1; //change to 0 after testing
       multiplier = 0;
@@ -220,7 +221,6 @@ public:
       target_x = pos_x;
       target_y = pos_y;
       target_o = ang_z;
-      target_z = 0.00;
       count = 1;
 
     }// initialise the positition X and angular z
@@ -300,9 +300,17 @@ public:
         if(ang_z < target_z) {
           if(fabs(ang_z - target_z)<180.0){ //ensuring the shortest path
             //ang_z += 1.0; //anticlockwise
-            multiplier = +1;
-            if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.35 * multiplier; //get the correct rotation
+            multiplier = +0.04;
+            if(fabs(target_z - ang_z) > 0.01){
+              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
+                trans_z = std::max(0.7, -trans_z); //get the correct rotation
+                printf("trans_z = %f\n", trans_z);
+              }
+              else{
+                trans_z = fabs(target_z-ang_z) * multiplier;
+                printf("trans_z = %f\n", trans_z);
+              }
+
             }
             else{
               trans_z = 0.00;
@@ -311,12 +319,19 @@ public:
           }
           else{
             //ang_z -= 1.0; //clockwise
-            multiplier = -1;
-            if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.35 * multiplier; //get the correct rotation
+            multiplier = -0.04;
+            if(fabs(target_z - ang_z) > 0.01){
+              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
+                trans_z = std::max(0.7, -trans_z); //get the correct rotation
+                printf("trans_z = %f\n", trans_z);
+              }
+              else{
+                trans_z = fabs(target_z-ang_z) * multiplier;
+                printf("trans_z = %f\n", trans_z);
+              }
             }
             else{
-              trans_z = 0;
+              trans_z = 0.0;
               turn = 0;
             }
           }
@@ -325,25 +340,38 @@ public:
         else {
           if(fabs(ang_z - target_z)<180.0){
             //ang_z -= 1.0; //clockwise
-            multiplier = -1;
-            if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.35 * multiplier; //get the correct rotation
+            multiplier = -0.04;
+            if(fabs(target_z - ang_z) > 0.01){
+              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
+                trans_z = std::max(0.7, -trans_z); //get the correct rotation
+                printf("trans_z = %f\n", trans_z);
+              }
+              else{
+                trans_z = fabs(target_z-ang_z) * multiplier;
+                printf("trans_z = %f\n", trans_z);
+              }
             }
             else{
-              trans_z = 0;
+              trans_z = 0.0;
               turn = 0;
 
             }
           } //ensuring the shortest path
 
           else{ //ensuring the shortest path
-            //ang_z += 1.0; //anticlockwise
-            multiplier = +1;
-            if(fabs(target_z - ang_z) > 0.0174){
-              trans_z = 0.35 * multiplier; //get the correct rotation
+            multiplier = +0.04;
+            if(fabs(target_z - ang_z) > 0.01){
+              if((trans_z = fabs(target_z-ang_z) * multiplier) > 0.07){
+                trans_z = std::max(0.7, -trans_z); //get the correct rotation
+                printf("trans_z = %f\n", trans_z);
+              }
+              else{
+                trans_z = fabs(target_z-ang_z) * multiplier;
+                printf("trans_z = %f\n", trans_z);
+              }
             }
             else{
-              trans_z = 0;
+              trans_z = 0.0;
               turn = 0;
 
             }
@@ -357,7 +385,7 @@ public:
       }
       if(turn == 0 && move_x == 1 && move_y == 0){
         if(fabs(target_x - pos_x) > 0.01){
-          trans_x = 0.4;
+          trans_x = 0.3;
         }
         else{
           trans_x = 0.0;
@@ -368,7 +396,7 @@ public:
       }
       if(turn == 0 && move_y == 1 && move_x == 0){
         if(fabs(target_y - pos_y) > 0.01){
-          trans_x = 0.4;
+          trans_x = 0.3;
         }
         else{
           trans_x = 0.0;
