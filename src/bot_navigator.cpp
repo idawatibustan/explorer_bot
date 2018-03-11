@@ -32,6 +32,7 @@ private:
   bool is_moving;
 
   double kp_x, kp_z;
+  double max_x, max_z;
 
   double trans_x, trans_z;
   double pos_x, pos_y, ori_z, ang_z;
@@ -48,8 +49,12 @@ public:
 
     is_moving = false;
 
+    kp_z = -0.9;
+    max_z = 0.5;
+
     trans_x = 0;
     trans_z = 0;
+
     pos_sub = nh.subscribe("/odom",1,&BotNavigator::callback, this);
     vel_pub = nh.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity",1);
     mov_pub = nh.advertise<std_msgs::Bool>("/is_moving",1);
@@ -154,7 +159,6 @@ public:
       count = 1;
       turn = 0;
 
-      kp_z = -0.9;
 
       target_x = pos_x;
       target_y = pos_y;
@@ -246,6 +250,13 @@ public:
       } else {
         trans_x = 0;
       }
+    }
+
+    // set maximum magnitude of trans_z
+    if( trans_z < 0 ) {
+      trans_z = std::max(-max_z, trans_z);
+    } else {
+      trans_z = std::min(trans_z, max_z);
     }
 
     base_cmd.linear.x = trans_x;
