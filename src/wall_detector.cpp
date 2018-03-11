@@ -112,7 +112,7 @@ class WallDetector{
             else
             {
               std::string wall ("0");
-              if ( l5 < 1.5 && l4 < 1.7 && l5 < l4 ) {
+              if ( l5 < 1.5 && l4 < 1.8 && l5 < l4 && l5 != 0 && l4 != 0 ) {
                 left_1 = true;
                 wall += "1";
               } else {
@@ -124,7 +124,7 @@ class WallDetector{
               } else {
                 wall += "0";
               }
-              if ( r5 < 1.5 && r4 < 1.7 && r5 < r4 ) {
+              if ( r5 < 1.5 && r4 < 1.8 && r5 < r4 && r5 != 0 && r4 != 0 ) {
                 right_1 = true;
                 wall += "1";
               } else {
@@ -135,17 +135,16 @@ class WallDetector{
 
             wall_pub.publish(wall_state);
             std::cout << std::setprecision(2) << std::fixed;
-            std::cout << j
-                      << " r5:" << r5
+            std::cout << " r:" << r5
                       << " r4:" << r4
-                      << " r3:" << r3
+                      << " r:" << r3
                       << " r2:" << r2
                       << " fr:" << fr
                       << " fl:" << fl
                       << " l2:" << l2
-                      << " l3:" << l3
+                      << " l:" << l3
                       << " l4:" << l4
-                      << " l5:" << l5
+                      << " l:" << l5
                       << " l6:" << l6 << std::endl;
             std::cout << "front:" << front_0
                       << " left:" << left_1
