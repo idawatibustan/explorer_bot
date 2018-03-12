@@ -1,5 +1,6 @@
 # explorer_bot
-A prototype search and rescue robot using the Turtlebot in a simulated world.
+A prototype search and rescue robot using the Turtlebot in a simulated world.<br/>
+Link: <a>https://github.com/idawatibustan/explorer_bot</a>
 
 ## How To
 1. Compile the simulation script
