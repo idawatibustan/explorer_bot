@@ -14,6 +14,13 @@
 
 class BotNavigator{
 private:
+  const double dt_threshold_high = 0.05;
+  const double dt_threshold_low = 0.01;
+  const double max_x = 0.5;
+  const double max_z = 0.5;
+  const double kp_x = 0.8;
+  const double kp_z = -1.1;
+
   ros::Subscriber pos_sub;
   ros::Publisher vel_pub;
   ros::Publisher mov_pub;
@@ -25,14 +32,10 @@ private:
   ros::ServiceServer move_east;
   ros::ServiceServer move_west;
 
+  bool is_moving;
   int count, turn;
   int move_n, move_s, move_e, move_w;
-  int turn_n, turn_s, turn_e, turn_w;
-
-  bool is_moving;
-
-  double kp_x, kp_z;
-  double max_x, max_z;
+  double dx_threshold, dt_threshold, dv_threshold;
 
   double trans_x, trans_z;
   double prev_trans_x, prev_trans_z;
@@ -48,13 +51,14 @@ public:
 
     is_moving = false;
 
-    kp_x = 0.8;
-    kp_z = -0.9;
-    max_x = 0.5;
-    max_z = 0.5;
+    dt_threshold = dt_threshold_low;
+    dx_threshold = 0.01;
+    dv_threshold = 0.1;
 
     trans_x = 0;
     trans_z = 0;
+    prev_trans_x = trans_x;
+    prev_trans_z = trans_z;
 
     pos_sub = nh.subscribe("/odom",1,&BotNavigator::callback, this);
     vel_pub = nh.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity",1);
@@ -137,6 +141,8 @@ public:
     printf("I want to turn and move west\n");
     return true;
   }
+  void threshold_up() { this->dt_threshold = this->dt_threshold_high; };
+  void threshold_down() { this->dt_threshold = this->dt_threshold_low; };
   void callback( const nav_msgs::OdometryConstPtr& poseMsg){
     geometry_msgs::Twist base_cmd;
     std_msgs::Bool moving;
@@ -167,8 +173,7 @@ public:
     dy = std::abs(target_y - pos_y);
     dt = angles::shortest_angular_distance(target_z, yaw);
 
-    int turn;
-    if(std::abs(dt) > 0.01){
+    if(std::abs(dt) > this->dt_threshold){
       trans_z = kp_z * dt;
       turn = 1;
       is_moving = true;
@@ -181,7 +186,8 @@ public:
     if(move_n == 1){ //flag to move north //moving in the north direction
       is_moving = true;
       if(turn == 0){
-        if(pos_x < target_x && dx > 0.01) {
+        threshold_up();
+        if(pos_x < target_x && dx > this->dx_threshold) {
           trans_x = kp_x * dx; //*dist; // Change robot velocity
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
@@ -189,6 +195,7 @@ public:
           trans_x = 0;
           move_n = 0;
           is_moving = false;
+          threshold_down();
           printf("move_n = %d\nturn = %d\n", move_n, turn);
         }
       } else {
@@ -199,7 +206,8 @@ public:
     if(move_s == 1){ //flag to move move_east
       is_moving = true;
       if(turn == 0) {
-        if(pos_x > target_x && dx > 0.01){
+        threshold_up();
+        if(pos_x > target_x && dx > this->dx_threshold){
           trans_x = kp_x * dx; //*dist; // Change robot velocity
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
@@ -207,6 +215,7 @@ public:
           trans_x = 0;
           move_s = 0;
           is_moving = false;
+          threshold_down();
           printf("move_s = %d\nturn = %d\n", move_s, turn);
         }
       } else {
@@ -217,7 +226,8 @@ public:
     if(move_e == 1){ //flag to move move_east
       is_moving = true;
       if(turn == 0) {
-        if(pos_y > target_y && dy > 0.01){
+        threshold_up();
+        if(pos_y > target_y && dy > this->dx_threshold){
           trans_x = kp_x * dy; //*dist; // Change robot velocity
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
@@ -225,6 +235,7 @@ public:
           trans_x = 0;
           move_e = 0;
           is_moving = false;
+          threshold_down();
           printf("move_e = %d\n turn = %d\n", move_e, turn);
         }
       } else {
@@ -235,7 +246,8 @@ public:
     if(move_w == 1){ //flag to move move_west
       is_moving = true;
       if(turn == 0) {
-        if(pos_y < target_y && dy > 0.01){
+        threshold_up();
+        if(pos_y < target_y && dy > this->dx_threshold){
           trans_x = kp_x * dy; //*dist; // Change robot velocity
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
@@ -243,6 +255,7 @@ public:
           trans_x = 0;
           move_w = 0;
           is_moving = false;
+          threshold_down();
           printf("move_s = %d\nturn = %d\n", move_w, turn);
         }
       } else {
@@ -267,41 +280,48 @@ public:
     double dv_x = trans_x - prev_trans_x;
     double dv_z = std::abs(trans_z - prev_trans_z);
 
-    if ( dv_x > 0.1 ) {
-      prev_trans_x += 0.1;
+    if ( dv_x > 0 ) {
+      if ( dv_x > this->dv_threshold ) {
+        prev_trans_x += this->dv_threshold;
+      } else {
+        prev_trans_x = trans_x;
+      }
     } else {
-      prev_trans_x = trans_x;
+      if ( dv_x < -this->dv_threshold ) {
+        prev_trans_x -= this->dv_threshold;
+      } else {
+        prev_trans_x = trans_x;
+      }
     }
 
-    if ( dv_z > 0.1 ) {
+    if ( dv_z > this->dv_threshold ) {
       if (trans_z < 0) {
-        prev_trans_z -= 0.1;
+        prev_trans_z -= this->dv_threshold;
       } else {
-        prev_trans_z += 0.1;
+        prev_trans_z += this->dv_threshold;
       }
     } else {
       prev_trans_z = trans_z;
     }
 
     base_cmd.linear.x = prev_trans_x;
-    if(turn == 1){
-      base_cmd.angular.z = prev_trans_z;
-    }
+    base_cmd.angular.z = prev_trans_z;
     vel_pub.publish(base_cmd);
-    
+
     moving.data = is_moving;
     mov_pub.publish(moving);
 
     if (trans_x + std::abs(trans_z) > 0) {
-      std::cout << std::setprecision(3) << std::fixed;
+      // std::cout << std::setprecision(3) << std::fixed;
       std::cout
-      << "P:" << pos_x << "," << pos_y << "," << yaw
-      << " T:" << target_x << "," << target_y << "," << target_z
-      << " d:" << dx << "," << dy
-      << " dt:" << std::abs(dt)
-      << " v:" <<  trans_x << ", " << trans_z
-      << " dv:" <<  dv_x << ", " << dv_z
-      << " av:" <<  prev_trans_x << ", " << prev_trans_z
+      // << "P:" << pos_x << "," << pos_y << "," << yaw
+      // << " T:" << target_x << "," << target_y << "," << target_z
+      // << " d:" << dx << "," << dy
+      // << " dt:" << std::abs(dt)
+      // << " v:" <<  trans_x << ", " << trans_z
+      // << " dv:" <<  dv_x << ", " << dv_z
+      << " tx:" << std::setw(5) << prev_trans_x
+      << " tz:" << std::setw(5) << prev_trans_z
       << std::endl;
     }
 
