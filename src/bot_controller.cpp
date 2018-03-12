@@ -411,9 +411,9 @@ public:
       std::cout << "Pos_y = " << pos_y <<'\n';
 
       if(trans_x == 0 && trans_z == 0){
-        is_moving = false:
+        is_moving = false;
       }
-      
+
       if(move_y == 1 || move_x == 1){
         base_cmd.linear.x = trans_x;
       }
