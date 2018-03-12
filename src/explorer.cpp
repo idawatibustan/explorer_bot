@@ -191,8 +191,8 @@ public:
     for(int i=0; i<this->size_; i++){
       for(int j=0; j<this->size_; j++){
         id = this->size_ * i + j;
-        // std::cout << "n:" << size << " id:" << id << " i:" << i << " j:" << j << std::endl;
         Node* n = new Node(id, i, j, this->goal_);
+        // std::cout << "n:" << this->size_ << " id:" << id << " i:" << i << " j:" << j << " g=" << n->getH() << std::endl;
         nodes[id] = n;
         if (j > 0) {
           this->graph.addEdge(id-1, id);
@@ -415,6 +415,7 @@ private:
   double pos_x, pos_y, ori_z, ang_z;
   double roll, pitch, yaw;
   double goal_x, goal_y;
+  double init_x, init_y;
   double d_x, d_y;
 
   int init_count, solver_code, recovery_count;
@@ -442,9 +443,11 @@ public:
     map.viewGraph();
     map.printAdj();
 
-    this->goal_x = 4.0;
-    this->goal_y = 4.0;
-    this->map_size_ = 9;
+    this->map_size_ = size;
+    this->goal_x = goal_x;
+    this->goal_y = goal_y;
+    this->init_x = init_x;
+    this->init_y = init_y;
 
     this->wall_front = false;
     this->wf_left = false;
@@ -692,11 +695,12 @@ int main(int argc, char** argv){
   ros::init(argc, argv, "explorer");
   ros::NodeHandle nh;
   int size, goal_x, goal_y, init_x, init_y;
-  ros::param::param("~size", size, 9);
-  ros::param::param("~goal_x", goal_x, 4);
-  ros::param::param("~goal_y", goal_y, 4);
-  ros::param::param("~init_x", init_x, 0);
-  ros::param::param("~init_y", init_y, 0);
+
+  ros::param::get("~size", size);
+  ros::param::get("~goal_x", goal_x);
+  ros::param::get("~goal_y", goal_y);
+  ros::param::get("~init_x", init_x);
+  ros::param::get("~init_y", init_y);
 
   Explorer ex(nh, size, goal_x, goal_y, init_x, init_y);
 
