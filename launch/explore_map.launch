@@ -1,5 +1,11 @@
 <launch>
   <node name="wall_detector" pkg="explorer_bot" type="wall_detector" />
   <node name="controller" pkg="explorer_bot" type="bot_navigator" />
-  <node name="explorer" pkg="explorer_bot" type="explorer" output="screen"/>
+  <node name="explorer" pkg="explorer_bot" type="explorer" output="screen">
+    <param name="size" value="9"/>
+    <param name="goal_x" value="5"/>
+    <param name="goal_y" value="5"/>
+    <param name="init_x" value="0"/>
+    <param name="init_y" value="0"/>
+  </node>
 </launch>
