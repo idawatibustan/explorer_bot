@@ -48,7 +48,6 @@ public:
   BotNavigator(ros::NodeHandle &nh){
     count = 0;
     turn = 0;
-
     is_moving = false;
 
     dt_threshold = dt_threshold_low;
@@ -105,8 +104,6 @@ public:
     target_x = req.goal.x + 1.0;
     turn = 1;
     move_n = 1;
-    is_moving = true;
-    printf("I want to move north\n");
   }
   bool move_south_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
@@ -115,9 +112,6 @@ public:
     target_x = req.goal.x - 1.0;
     turn = 1;
     move_s = 1;
-    is_moving = true;
-    printf("I want to turn and move south\n");
-    return true;
   }
   bool move_east_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
@@ -126,9 +120,6 @@ public:
     target_y = req.goal.y - 1.0;
     turn = 1;
     move_e = 1;
-    is_moving = true;
-    printf("I want to turn and move east\n");
-    return true;
   }
   bool move_west_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
@@ -137,9 +128,6 @@ public:
     target_y = req.goal.y + 1.0;
     turn = 1;
     move_w = 1;
-    is_moving = true;
-    printf("I want to turn and move west\n");
-    return true;
   }
   void threshold_up() { this->dt_threshold = this->dt_threshold_high; };
   void threshold_down() { this->dt_threshold = this->dt_threshold_low; };
@@ -161,18 +149,19 @@ public:
     if(count == 0){ // initialisation process
       count = 1;
       turn = 0;
-
+      // initialize target to pos keep the robot at starting point
       target_x = pos_x;
       target_y = pos_y;
       target_z = yaw;
       printf("Initialiation pose = %f, %f\n", pos_x, pos_y);
       printf("Orientation of Turtlebot = %f \n", yaw);
-    } // initialise the positition X and angular z
-
+    }
+    // get difference from position to from target
     dx = std::abs(target_x - pos_x);
     dy = std::abs(target_y - pos_y);
     dt = angles::shortest_angular_distance(target_z, yaw);
 
+    // keep the robot to face the intended direction when moving forward
     if(std::abs(dt) > this->dt_threshold){
       trans_z = kp_z * dt;
       turn = 1;
@@ -183,15 +172,18 @@ public:
       is_moving = false;
     }
 
-    if(move_n == 1){ //flag to move north //moving in the north direction
+    // moving towords north
+    if(move_n == 1){
       is_moving = true;
+      // do not move until turning to intended direction
       if(turn == 0){
-        threshold_up();
+        threshold_up(); // toggle up threshold to reduce bumpiness
         if(pos_x < target_x && dx > this->dx_threshold) {
-          trans_x = kp_x * dx; //*dist; // Change robot velocity
+          trans_x = kp_x * dx; // proportionate control to target speed
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
         else{
+          // target distance reached, stop movement, set flags to false
           trans_x = 0;
           move_n = 0;
           is_moving = false;
@@ -202,13 +194,13 @@ public:
         trans_x = 0;
       }
     }
-
-    if(move_s == 1){ //flag to move move_east
+    // moving towards south
+    if(move_s == 1){
       is_moving = true;
       if(turn == 0) {
         threshold_up();
         if(pos_x > target_x && dx > this->dx_threshold){
-          trans_x = kp_x * dx; //*dist; // Change robot velocity
+          trans_x = kp_x * dx;
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
         else{
@@ -222,13 +214,13 @@ public:
         trans_x = 0;
       }
     }
-
-    if(move_e == 1){ //flag to move move_east
+    // moving towards east
+    if(move_e == 1){
       is_moving = true;
       if(turn == 0) {
         threshold_up();
         if(pos_y > target_y && dy > this->dx_threshold){
-          trans_x = kp_x * dy; //*dist; // Change robot velocity
+          trans_x = kp_x * dy;
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
         else{
@@ -242,8 +234,8 @@ public:
         trans_x = 0;
       }
     }
-
-    if(move_w == 1){ //flag to move move_west
+    // moving towards west
+    if(move_w == 1){
       is_moving = true;
       if(turn == 0) {
         threshold_up();
@@ -277,10 +269,11 @@ public:
       trans_z = std::min(trans_z, max_z);
     }
 
+    // get increase in speed of trans_x & trans_z
     double dv_x = trans_x - prev_trans_x;
     double dv_z = std::abs(trans_z - prev_trans_z);
-
-    if ( dv_x > 0 ) {
+    // simple controller max acceleration of dv_threshold
+    if ( dv_x > 0 ) { // for trans_x
       if ( dv_x > this->dv_threshold ) {
         prev_trans_x += this->dv_threshold;
       } else {
@@ -293,7 +286,7 @@ public:
         prev_trans_x = trans_x;
       }
     }
-
+    // acceleration control for trans_z
     if ( dv_z > this->dv_threshold ) {
       if (trans_z < 0) {
         prev_trans_z -= this->dv_threshold;
@@ -304,15 +297,16 @@ public:
       prev_trans_z = trans_z;
     }
 
+    // send trans_x & trans_z
     base_cmd.linear.x = prev_trans_x;
     base_cmd.angular.z = prev_trans_z;
     vel_pub.publish(base_cmd);
-
+    // publish if robot is_moving
     moving.data = is_moving;
     mov_pub.publish(moving);
 
+    // print if robot is moving (monitoring purposes)
     if (trans_x + std::abs(trans_z) > 0) {
-      // std::cout << std::setprecision(3) << std::fixed;
       std::cout
       // << "P:" << pos_x << "," << pos_y << "," << yaw
       // << " T:" << target_x << "," << target_y << "," << target_z
@@ -324,7 +318,6 @@ public:
       << " tz:" << std::setw(5) << prev_trans_z
       << std::endl;
     }
-
   }
 };
 
