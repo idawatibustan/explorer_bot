@@ -148,6 +148,7 @@ public:
     for(int i=0; i<size*size; i++) {
       this->closed_nodes[i] = 0;
     }
+    this->closed_nodes[id_init] = 1;
     print();
   }
   Map()
@@ -162,12 +163,20 @@ public:
     for(int i=0; i<81; i++) {
       this->closed_nodes[i] = 0;
     }
+    this->closed_nodes[id_init] = 1;
     print();
   }
   void print() {
     std::cout << " Goal:" << this->goal_.getX() << ", " << this->goal_.getY()
     << " Init:" << this->init_.getX() << ", " << this->init_.getY()
     << " Curr:" << this->curr_.getX() << ", " << this->curr_.getY() << std::endl;
+  }
+  void printPath() {
+    std:std::cout << "path:";
+    for(int &i: this->path){
+      std::cout << " >[" <<  std::setw(2) << i << "]";
+    }
+    std::cout << std::endl;
   }
   void generateGraph(){
     if (this->is_generated){
@@ -637,6 +646,13 @@ public:
         if(this->solver_code == -2) {
           ROS_INFO("DeadEnd, reupdate map");
           this->map = new Map(this->map_size_, Position(this->goal_x, this->goal_y), this->map->getNodePosition(map_curr_id));
+          this->map->generateGraph();
+          this->map->viewGraph();
+          ROS_INFO("Exiting recovery_mode");
+          this->init_completed = false;
+          this->init_count = 0;
+          this->recovery_mode = false;
+          this->recovery_count = 0;
         } else {
           ROS_INFO("Path found: %d. Exiting recovery mode", this->solver_code);
           this->recovery_mode = false;
@@ -673,6 +689,7 @@ public:
   void close() {
     this->map->printAdj();
     this->map->viewGraph();
+    this->map->printPath();
   }
 };
 
