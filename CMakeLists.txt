@@ -9,8 +9,8 @@ add_compile_options(-std=c++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-	geometry_msgs
-	message_generation
+  geometry_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -139,17 +139,11 @@ target_link_libraries(wall_detector ${catkin_LIBRARIES})
 
 add_executable(bot_navigator src/bot_navigator.cpp)
 target_link_libraries(bot_navigator ${catkin_LIBRARIES})
-
-add_executable(bot_controller src/bot_controller.cpp)
-target_link_libraries(bot_controller ${catkin_LIBRARIES})
-add_dependencies(bot_controller explorer_bot_gencpp)
-
-add_executable(turn_controller src/turn_controller.cpp)
-target_link_libraries(turn_controller ${catkin_LIBRARIES})
-# add_dependencies(turn_controller explorer_bot_gencpp)
+add_dependencies(bot_navigator explorer_bot_gencpp)
 
 add_executable(explorer src/explorer.cpp)
 target_link_libraries(explorer ${catkin_LIBRARIES})
+add_dependencies(explorer explorer_bot_gencpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
