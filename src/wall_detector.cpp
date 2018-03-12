@@ -112,7 +112,7 @@ class WallDetector{
             else
             {
               std::string wall ("0");
-              if ( l5 < 1.5 && l4 < 1.8 && l5 < l4 && l5 != 0 && l4 != 0 ) {
+              if ( l4 < 1.5 && l3 < 1.8 && l4 < l3 && l4 != 0 && l3 != 0 ) {
                 left_1 = true;
                 wall += "1";
               } else {
@@ -124,7 +124,7 @@ class WallDetector{
               } else {
                 wall += "0";
               }
-              if ( r5 < 1.5 && r4 < 1.8 && r5 < r4 && r5 != 0 && r4 != 0 ) {
+              if ( r4 < 1.5 && r3 < 1.8 && r4 < r3 && r4 != 0 && r3 != 0 ) {
                 right_1 = true;
                 wall += "1";
               } else {
