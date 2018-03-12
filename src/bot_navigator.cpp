@@ -19,7 +19,7 @@ private:
   const double max_x = 0.5;
   const double max_z = 0.5;
   const double kp_x = 0.8;
-  const double kp_z = -1.1;
+  const double kp_z = -1.2;
 
   ros::Subscriber pos_sub;
   ros::Publisher vel_pub;

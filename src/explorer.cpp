@@ -111,7 +111,7 @@ public:
     }
     std::cout << std::endl;
   }
-  void printGraph() {
+  void printAdjList() {
     for(int i = 0; i < node_count; i++){
       printNeighbors(i);
     }
@@ -130,9 +130,9 @@ private:
   Position goal_, init_, curr_;
   Graph graph;
   bool is_generated;
+
   std::map<int, Node*> nodes;
   std::vector<int> path;
-
   int* closed_nodes;
 
 public:
@@ -142,12 +142,13 @@ public:
     this->id_goal = size * this->goal_.getX() + this->goal_.getY();
     this->id_init = size * this->init_.getX() + this->init_.getY();
     this->id_curr = size * this->curr_.getX() + this->curr_.getY();
-    this->path.push_back(this->id_init);
     this->is_generated = false;
     this->closed_nodes = new int[size*size];
     for(int i=0; i<size*size; i++) {
       this->closed_nodes[i] = 0;
     }
+    this->path.push_back(this->id_init);
+    this->closed_nodes[this->id_init] = 1;
     print();
   }
   Map()
@@ -162,12 +163,20 @@ public:
     for(int i=0; i<81; i++) {
       this->closed_nodes[i] = 0;
     }
+    this->closed_nodes[id_init] = 1;
     print();
   }
   void print() {
     std::cout << " Goal:" << this->goal_.getX() << ", " << this->goal_.getY()
     << " Init:" << this->init_.getX() << ", " << this->init_.getY()
     << " Curr:" << this->curr_.getX() << ", " << this->curr_.getY() << std::endl;
+  }
+  void printPath() {
+    std:std::cout << "path:";
+    for(int &i: this->path){
+      std::cout << " >[" <<  std::setw(2) << i << "]";
+    }
+    std::cout << std::endl;
   }
   void generateGraph(){
     if (this->is_generated){
@@ -193,7 +202,7 @@ public:
         if (i < this->size_-1) {
           this->graph.addEdge(id, id+this->size_);
         }
-        // this->graph.printGraph();
+        // this->graph.printAdjList();
       }
     }
     nodes[id_init]->setG(0.0);
@@ -201,7 +210,7 @@ public:
   }
   std::map<int, Node*> getNodes() { return nodes; }
   Graph* getGraph() { return &graph; }
-  void printAdj() { this->graph.printGraph(); }
+  void printAdj() { this->graph.printAdjList(); }
   void viewGraph() {
     for(int i=this->size_-1; i>=0; i--){
       for(int j=0; j<this->size_; j++){
@@ -227,7 +236,6 @@ public:
   }
   bool removeNorth(int id) {
     int id_north = id+this->size_;
-    std::cout << "remove north: [" << id << ", " << id_north << "]" << std::endl;
     if (id_north >= this->graph.getNodeCount()) {
       return false;
     }
@@ -235,7 +243,6 @@ public:
   }
   bool removeEast(int id) {
     int id_east = id+1;
-    std::cout << "remove east: [" << id << ", " << id_east << "]" << std::endl;
     if (id_east >= this->graph.getNodeCount()) {
       return false;
     }
@@ -243,7 +250,6 @@ public:
   }
   bool removeSouth(int id) {
     int id_south = id-this->size_;
-    std::cout << "remove south: [" << id << ", " << id_south << "]" << std::endl;
     if (id_south >= this->graph.getNodeCount()) {
       return false;
     }
@@ -251,7 +257,6 @@ public:
   }
   bool removeWest(int id) {
     int id_west = id-1;
-    std::cout << "remove west: [" << id << ", " << id_west << "]" << std::endl;
     if (id_west >= this->graph.getNodeCount()) {
       return false;
     }
@@ -270,21 +275,17 @@ public:
   }
   bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
-    std::cout << "WALL self " << id << ">" << ori
-              << " front:" << wall_front << std::endl;
     bool wall_change = false;
     if(wall_front) {
       int id_neighbor = this->getNeighborId(id, ori);
       wall_change = this->graph.removeEdge(id, id_neighbor);
     }
     if(wall_change) {
-      std::cout << "updating edge, wall_changed" << std::endl;
+      // std::cout << "Updating edge, wall_changed." << std::endl;
     }
     return wall_change;
   }
   bool updateEdge(int id, int ori, bool wall_left, bool wall_front, bool wall_right){
-    std::cout << " --> WALL front " << id << ">" << ori
-              << " walls:" << wall_left << wall_front << wall_right << std::endl;
     bool left_change=false, front_change=false, right_change=false;
     if(wall_left) {
       switch(ori) {
@@ -311,7 +312,7 @@ public:
       }
     }
     if(left_change || front_change || right_change){
-      std::cout << "updating edge, wall_changed" << left_change << front_change << right_change << std::endl;
+      // std::cout << "Updating edge, wall_changed(l,f,w):(" << left_change << front_change << right_change << std::endl;
     }
     return left_change || front_change || right_change;
   }
@@ -373,6 +374,9 @@ public:
     }
     return -1;
   }
+  Position getNodePosition(int n) {
+    return Position(this->nodes[n]->getPosX(), this->nodes[n]->getPosY());
+  }
   explorer_bot::MoveGoal getNodeGoal(int n) {
     explorer_bot::MoveGoal goal;
     goal.request.goal.x = this->nodes[n]->getPosX();
@@ -403,13 +407,13 @@ private:
   bool wall_front, wf_left, wf_front, wf_right;
 
   int map_size_;
-  Map map;
+  Map* map;
 
 public:
   Explorer( ros::NodeHandle &nh, int size,
     int goal_x, int goal_y,
     int init_x, int init_y )
-  : map(size, Position(goal_x, goal_y), Position(init_x, init_y)) {
+  {
     this->init_completed = false;
     this->goal_reached = false;
     this->is_moving = false;
@@ -417,16 +421,18 @@ public:
 
     this->init_count = 0;
     this->solver_code = 0;
-
-    map.generateGraph();
-    map.viewGraph();
-    map.printAdj();
+    this->recovery_count = 0;
 
     this->map_size_ = size;
     this->goal_x = goal_x;
     this->goal_y = goal_y;
     this->init_x = init_x;
     this->init_y = init_y;
+
+    this->map = new Map(size, Position(goal_x, goal_y), Position(init_x, init_y));
+    this->map->generateGraph();
+    this->map->viewGraph();
+    this->map->printAdj();
 
     this->wall_front = false;
     this->wf_left = false;
@@ -474,7 +480,6 @@ public:
     wf_left = (res[1] == '1');
     wf_front = (res[2] == '1');
     wf_right = (res[3] == '1');
-    // std::cout << wall_front << wf_left << wf_front << wf_right << std::endl;
   }
   void mov_callback( const std_msgs::BoolConstPtr& movMsg ) {
     this->is_moving = movMsg->data;
@@ -484,51 +489,42 @@ public:
   bool in_recovery_mode() { return this->recovery_mode; }
 
   void update_wall(int map_curr_id, int ori) {
-    bool is_updated = false;
-    is_updated = map.updateEdge(map_curr_id, ori, this->wall_front);
+    this->map->updateEdge(map_curr_id, ori, this->wall_front);
     if(!this->wall_front){
-      // get neighbor id, then update
-      int map_neighbor_id = map.getNeighborId(map_curr_id, ori);
-      is_updated = map.updateEdge(map_neighbor_id, ori, this->wf_left, this->wf_front, this->wf_right) || is_updated;
-    }
-    if(is_updated){
-      this->map.printAdj();
+      // get neighbor id, then update the neighbor's edges
+      int map_neighbor_id = this->map->getNeighborId(map_curr_id, ori);
+      this->map->updateEdge(map_neighbor_id, ori, this->wf_left, this->wf_front, this->wf_right);
     }
   }
   void force_update_wall(int map_curr_id, int ori) {
-    this->map.forceUpdateEdge(map_curr_id, ori, this->wall_front);
+    this->map->forceUpdateEdge(map_curr_id, ori, this->wall_front);
   }
   void init_search() {
     if(this->is_moving)
       return;
+    // when not moving, turn the robot 360
     switch(init_count){
-      case 0: ROS_INFO("Updating 1st wall");
+      case 0: ROS_INFO("Updating North wall");
               this->turn_north.call(esrv);
               break;
-      case 1: ROS_INFO("Updating 2nd wall");
+      case 1: ROS_INFO("Updating East wall");
               this->turn_east.call(esrv);
               break;
-      case 2: ROS_INFO("Updating 3rd wall");
+      case 2: ROS_INFO("Updating South wall");
               this->turn_south.call(esrv);
               break;
-      case 3: ROS_INFO("Updating 3rd wall");
+      case 3: ROS_INFO("Updating West wall");
               this->turn_west.call(esrv);
               break;
       case 4: ROS_INFO("Back to initial state");
               this->turn_north.call(esrv);
               break;
     }
-    /*
-    // declare initial position
-    // update_wall;
-    // if(east exists) turnEast, updateWall;
-    // if(south exits) turn south, updateWall;
-    // if(west exists) turn west, updateWall;
-    */
   }
   void do_recovery() {
     if(this->is_moving)
       return;
+    // when not moving, turn the robot 360
     switch(recovery_count){
       case 0: ROS_INFO("Updating North wall");
               this->turn_north.call(esrv);
@@ -542,7 +538,7 @@ public:
       case 3: ROS_INFO("Updating West wall");
               this->turn_west.call(esrv);
               break;
-      case 4: ROS_INFO("Exit recovery: Deadend?");
+      case 4: ROS_INFO("Completed 360deg turn");
               this->turn_north.call(esrv);
               break;
     }
@@ -553,74 +549,96 @@ public:
     int z = round(yaw/(0.5*M_PI));
     double d_z = std::abs( yaw/(0.5*M_PI) - z );
     int map_curr_id = this->map_size_ * x + y;
-    // determine robot map_ori from yaw
-    // ori: [0, 1, 2, 3] = [n, e, s, w]
+    // converting yaw to robot map_curr_ori
+    // map_curr_ori: [0, 1, 2, 3] = [n, e, s, w]
     int map_curr_ori = int(round( -yaw/(0.5*M_PI) ) + 4 ) % 4;
 
-    // std::cout << "   d_x:" << std::abs(pos_x - x)
-    //           << " d_y:" << std::abs(pos_y - y)
-    //           << " d_z:" << d_z << std::endl;
-    // std::cout << std::setprecision(3)
-    //           << "   pos_x:" << pos_x << " x:" << x
-    //           << " pos_y:" << pos_y << " y:" << y
-    //           << " ang_z:" << ang_z
-    //           << " yaw:" << yaw << std::endl;
+    // when robot is in the center of the grid, update wall (remove only)
     if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
-      // update wall when robot is in the center of the grid;
-      std::cout << "**N[" << map_curr_id
-                << "](" << x << "," << y
-                << ") ori: " << map_curr_ori << std::endl;
       if(this->recovery_mode){
         this->force_update_wall(map_curr_id, map_curr_ori);
       } else {
         this->update_wall(map_curr_id, map_curr_ori);
       }
     }
-    std::cout << "-" << std::endl;
-    // if robot is moving, don't perform any search algo
+    // if robot is moving, don't perform any search or path planning algo
     if(this->is_moving)
       return;
-    if ( d_z < 0.04 ) {
-      if( this->init_count < 6){
-        switch (init_count) {
-          case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
-          case 1: this->init_count = (map_curr_ori == 1) ? 4 : 1; break;
-          case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
-          case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
-          case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4;
-                  break;
-          case 5: this->init_count++;
-                  this->init_completed = true;
-                  this->solver_code = this->map.solveNextStep(map_curr_id);
-                  ROS_INFO("trying to solve next");
-                  break;
-        }
+    // initialization mode, scan the initial surrounding
+    if ( d_z < 0.04 && this->init_count < 6) {
+      switch (init_count) { // move on to next when facing intended orientation
+        case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
+        case 1: this->init_count = (map_curr_ori == 1) ? 4 : 1; break;
+                // skip turn west and south
+                // to unskip, change 4 to 2 on line above
+        case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
+        case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
+        case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4; break;
+        case 5: this->init_count++; // break the loop, start searching
+                this->init_completed = true;
+                ROS_INFO("Initialization completed, start searching");
+                this->solver_code = this->map->solveNextStep(map_curr_id);
+                break;
       }
     }
-
+    // set map_next_id based on next id in this->path in map
     int map_next_id = map_curr_id;
     if(this->init_completed == true) {
-      map_next_id = this->map.peekNextPath(map_curr_id);
+      map_next_id = this->map->peekNextPath(map_curr_id);
       std::cout << "next = " << map_next_id
                 << " curr = " << map_curr_id << std::endl;
       if (map_next_id == -1) {
         if (this->solver_code == -2) {
           ROS_INFO("Robot stuck, recovery_mode triggered");
           this->recovery_mode = true;
+          map_next_id = map_curr_id;
         } else {
-          this->solver_code = this->map.solveNextStep(map_curr_id);
+          // map_next_id = -1, next path is not generated. Generate next path
+          this->solver_code = this->map->solveNextStep(map_curr_id);
         }
       }
     }
-    if(map_curr_id != map_next_id){
-      ROS_INFO("MOVE!!! %d -> %d", map_curr_id, map_next_id);
+    // recovery mode, force update wall, add & remove immediate wall
+    if(this->recovery_mode){
+      if(this->recovery_count < 6 && d_z < 0.04 ) {
+        switch (recovery_count) {
+          case 0: this->recovery_count = (map_curr_ori == 0) ? 1 : 0; break;
+          case 1: this->recovery_count = (map_curr_ori == 1) ? 2 : 1; break;
+          case 2: this->recovery_count = (map_curr_ori == 2) ? 3 : 2; break;
+          case 3: this->recovery_count = (map_curr_ori == 3) ? 4 : 3; break;
+          case 4: this->recovery_count = (map_curr_ori == 0) ? 5 : 4; break;
+          case 5: this->recovery_count++;
+                  this->solver_code = this->map->solveNextStep(map_curr_id);
+                  ROS_INFO("Recovery done, trying to solve again: %d", this->solver_code);
+          break;
+        }
+      } else {
+        if(this->solver_code == -2) {
+          ROS_INFO("Dead End > no path found after recovery mode. Regenerate map");
+          // use same goal and current position and init pose
+          this->map = new Map(this->map_size_, Position(this->goal_x, this->goal_y), this->map->getNodePosition(map_curr_id));
+          this->map->generateGraph();
+          this->map->viewGraph();
+          ROS_INFO("Exiting recovery_mode. Reinitialize.");
+          this->init_completed = false;
+          this->init_count = 0;
+          this->recovery_mode = false;
+          this->recovery_count = 0;
+        } else {
+          ROS_INFO("Path found: %d. Exiting recovery mode and continue.", this->solver_code);
+          this->recovery_mode = false;
+          this->recovery_count = 0;
+        }
+      }
+    } // id next is not current, move towards it.
+    else if(map_curr_id != map_next_id && map_next_id != -1){
+      ROS_INFO("Moving %d -> %d", map_curr_id, map_next_id);
       int n = map_curr_id+this->map_size_;
       int e = map_curr_id+1;
       int s = map_curr_id-this->map_size_;
       int w = map_curr_id-1;
-      this->goal = this->map.getNodeGoal(map_curr_id);
+      this->goal = this->map->getNodeGoal(map_curr_id);
       if(!this->is_moving) {
-        ROS_INFO("send");
         if(map_next_id == n) {
           this->move_north.call(goal);
         } else if (map_next_id == e) {
@@ -630,34 +648,16 @@ public:
         } else if (map_next_id == w) {
           this->move_west.call(goal);
         } else {
-          ROS_INFO("nothing match");
-        }
-      }
-    } else {
-      ROS_INFO("chillin!!! %d -> %d", map_curr_id, map_next_id);
-    }
-    if(this->recovery_mode){
-      if ( d_z < 0.04 ) {
-        if( this->recovery_count < 6){
-          switch (recovery_count) {
-            case 0: this->recovery_count = (map_curr_ori == 0) ? 1 : 0; break;
-            case 1: this->recovery_count = (map_curr_ori == 1) ? 2 : 1; break;
-            case 2: this->recovery_count = (map_curr_ori == 2) ? 3 : 2; break;
-            case 3: this->recovery_count = (map_curr_ori == 3) ? 4 : 3; break;
-            case 4: this->recovery_count = (map_curr_ori == 0) ? 5 : 4;
-                    break;
-            case 5: this->recovery_count++;
-                    ROS_INFO("Recovery done, what to do?");
-                    break;
-          }
+          ROS_INFO("Illegal path selected!");
         }
       }
     }
     return;
   }
   void close() {
-    // this->map.printAdj();
-    this->map.viewGraph();
+    // this->map->printAdj();
+    this->map->viewGraph();
+    this->map->printPath();
   }
 };
 
@@ -693,7 +693,7 @@ int main(int argc, char** argv){
   }
   ros::Time end = ros::Time::now();
   double duration = (end - begin).toSec();
-  ROS_INFO("Turtlebot has reached the goal in %f seconds", duration);
   ex.close();
+  ROS_INFO("Turtlebot has reached the goal in %f seconds", duration);
   return 0;
 }
