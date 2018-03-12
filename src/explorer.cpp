@@ -612,7 +612,22 @@ public:
         }
       }
     }
-    if(map_curr_id != map_next_id){
+    if(this->recovery_mode){
+      if ( d_z < 0.04 ) {
+        if( this->recovery_count < 6){
+          switch (recovery_count) {
+            case 0: this->recovery_count = (map_curr_ori == 0) ? 1 : 0; break;
+            case 1: this->recovery_count = (map_curr_ori == 1) ? 2 : 1; break;
+            case 2: this->recovery_count = (map_curr_ori == 2) ? 3 : 2; break;
+            case 3: this->recovery_count = (map_curr_ori == 3) ? 4 : 3; break;
+            case 4: this->recovery_count = (map_curr_ori == 0) ? 5 : 4; break;
+            case 5: this->recovery_count++;
+            ROS_INFO("Recovery done, what to do?");
+            break;
+          }
+        }
+      }
+    } else if(map_curr_id != map_next_id){
       ROS_INFO("MOVE!!! %d -> %d", map_curr_id, map_next_id);
       int n = map_curr_id+this->map_size_;
       int e = map_curr_id+1;
@@ -635,23 +650,6 @@ public:
       }
     } else {
       ROS_INFO("chillin!!! %d -> %d", map_curr_id, map_next_id);
-    }
-    if(this->recovery_mode){
-      if ( d_z < 0.04 ) {
-        if( this->recovery_count < 6){
-          switch (recovery_count) {
-            case 0: this->recovery_count = (map_curr_ori == 0) ? 1 : 0; break;
-            case 1: this->recovery_count = (map_curr_ori == 1) ? 2 : 1; break;
-            case 2: this->recovery_count = (map_curr_ori == 2) ? 3 : 2; break;
-            case 3: this->recovery_count = (map_curr_ori == 3) ? 4 : 3; break;
-            case 4: this->recovery_count = (map_curr_ori == 0) ? 5 : 4;
-                    break;
-            case 5: this->recovery_count++;
-                    ROS_INFO("Recovery done, what to do?");
-                    break;
-          }
-        }
-      }
     }
     return;
   }
