@@ -38,19 +38,16 @@ private:
   Position p_;
   double g_, h_, f_;
   bool calculated;
-  bool visited;
 public:
   Node(int id, int x, int y, const Position &goal) : p_(x, y) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
-    this->visited = false;
   }
   Node(int id, const Position &p, const Position &goal) : p_(p) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
-    this->visited = false;
   }
   double getPosX() { return this->p_.getX(); }
   double getPosY() { return this->p_.getY(); }
@@ -70,10 +67,6 @@ public:
   void setG(double g) {
     this->g_ = g;
     this->calculated = false;
-  }
-  bool is_visited() { return this->visited; }
-  void mark_visited() {
-    this->visited = true;
   }
 };
 
@@ -141,7 +134,6 @@ private:
   std::vector<int> path;
 
   int* closed_nodes;
-  // int* open_nodes;
 
 public:
   Map(int size, const Position &goal, const Position &init)
@@ -153,11 +145,8 @@ public:
     this->path.push_back(this->id_init);
     this->is_generated = false;
     this->closed_nodes = new int[size*size];
-    // this->open_nodes = new int[size*size];
-
     for(int i=0; i<size*size; i++) {
       this->closed_nodes[i] = 0;
-      // this->open_nodes[i] = 0;
     }
     print();
   }
@@ -170,11 +159,8 @@ public:
     this->path.push_back(this->id_init);
     this->is_generated = false;
     this->closed_nodes = new int[81];
-    // this->open_nodes = new int[81];
-
     for(int i=0; i<81; i++) {
       this->closed_nodes[i] = 0;
-      // this->open_nodes[i] = 0;
     }
     print();
   }
@@ -192,7 +178,8 @@ public:
       for(int j=0; j<this->size_; j++){
         id = this->size_ * i + j;
         Node* n = new Node(id, i, j, this->goal_);
-        // std::cout << "n:" << this->size_ << " id:" << id << " i:" << i << " j:" << j << " g=" << n->getH() << std::endl;
+        // std::cout << "n:" << this->size_ << " id:" << id << " i:" << i << " j:" << j
+        //           << " g=" << n->getH() << std::endl;
         nodes[id] = n;
         if (j > 0) {
           this->graph.addEdge(id-1, id);
@@ -225,9 +212,18 @@ public:
           std::cout << '[' << std::setw(2) << id << "] ";
         }
       }
-      std::cout << std::endl;
-      std::cout << std::endl;
+      std::cout << std::endl << std::endl;
     }
+  }
+  int getNeighborId(int id, int direction) {
+    // dir: [0, 1, 2, 3] = [n, e, s, w]
+    switch(direction) {
+      case 0 : return id+this->size_;
+      case 1 : return id+1;
+      case 2 : return id-this->size_;
+      case 3 : return id-1;
+    }
+    return -1;
   }
   bool removeNorth(int id) {
     int id_north = id+this->size_;
@@ -265,20 +261,11 @@ public:
     // ori: [0, 1, 2, 3] = [n, e, s, w]
     std::cout << "FORCE UPDATE " << id << ">" << ori
               << " front:" << wall_front << std::endl;
+    int id_neighbor = this->getNeighborId(id, ori);
     if(wall_front) {
-      switch(ori) {
-        case 0 : this->removeNorth(id); break;
-        case 1 : this->removeEast(id); break;
-        case 2 : this->removeSouth(id); break;
-        case 3 : this->removeWest(id); break;
-      }
+      this->graph.removeEdge(id, id_neighbor);
     } else {
-      switch(ori) {
-        case 0 : this->graph.addEdge(id, id+this->size_); break; // add North
-        case 1 : this->graph.addEdge(id, id+1); break; // add East
-        case 2 : this->graph.addEdge(id-this->size_, id); break; // add South
-        case 3 : this->graph.addEdge(id-1, id); break; // add West
-      }
+      this->graph.addEdge(id, id_neighbor);
     }
   }
   bool updateEdge(int id, int ori, bool wall_front) {
@@ -287,17 +274,11 @@ public:
               << " front:" << wall_front << std::endl;
     bool wall_change = false;
     if(wall_front) {
-      switch(ori) {
-        case 0 : wall_change = this->removeNorth(id); break;
-        case 1 : wall_change = this->removeEast(id); break;
-        case 2 : wall_change = this->removeSouth(id); break;
-        case 3 : wall_change = this->removeWest(id); break;
-      }
+      int id_neighbor = this->getNeighborId(id, ori);
+      wall_change = this->graph.removeEdge(id, id_neighbor);
     }
     if(wall_change) {
       std::cout << "updating edge, wall_changed" << std::endl;
-    // } else {
-    //   std::cout << "no change" << std::endl;
     }
     return wall_change;
   }
@@ -331,8 +312,6 @@ public:
     }
     if(left_change || front_change || right_change){
       std::cout << "updating edge, wall_changed" << left_change << front_change << right_change << std::endl;
-    // } else {
-    //   std::cout << "no change" << std::endl;
     }
     return left_change || front_change || right_change;
   }
@@ -361,7 +340,7 @@ public:
       }
     }
     if (min_f == 1000.0 || n_min == NULL){
-      ROS_INFO("Next node not found!");
+      std::cout << "Next node not found!" << std::endl;
       return -2;
     }
     std::cout << "* node[" << std::setw(2) << n_min->getId()
@@ -479,20 +458,15 @@ public:
       poseMsg->pose.pose.orientation.w);
     tf::Matrix3x3 m(q);
     m.getRPY(this->roll, this->pitch, this->yaw);
-
+    // get distance from goal
     d_x = std::abs(pos_x - goal_x);
     d_y = std::abs(pos_y - goal_y);
+    // ste goal_reached flag if robot is in goal area
     if ( d_x < 0.2 && d_y < 0.2 ) {
       this->goal_reached = true;
     } else {
       this->goal_reached = false;
     }
-
-    // std::cout<< std::setprecision(2) << std::fixed;
-    // std::cout << poseMsg->header.stamp
-    //           << " Curr:" << pos_x << ", " << pos_y
-    //           << " Trgt:" << goal_x << ", " << goal_y
-    //           << " Dist:" << d_x << ", " << d_y << std::endl;
   }
   void wall_callback( const std_msgs::StringConstPtr& msg ) {
     std::string res = msg->data.c_str();
@@ -508,18 +482,13 @@ public:
   bool is_init_completed() { return this->init_completed; }
   bool is_goal_reached() { return this->goal_reached; }
   bool in_recovery_mode() { return this->recovery_mode; }
+
   void update_wall(int map_curr_id, int ori) {
     bool is_updated = false;
     is_updated = map.updateEdge(map_curr_id, ori, this->wall_front);
     if(!this->wall_front){
-      // get orientation before deciding which to update
-      int map_neighbor_id;
-      switch(ori) {
-        case 0 : map_neighbor_id = map_curr_id+this->map_size_; break;
-        case 1 : map_neighbor_id = map_curr_id+1; break;
-        case 2 : map_neighbor_id = map_curr_id-this->map_size_; break;
-        case 3 : map_neighbor_id = map_curr_id+1; break;
-      }
+      // get neighbor id, then update
+      int map_neighbor_id = map.getNeighborId(map_curr_id, ori);
       is_updated = map.updateEdge(map_neighbor_id, ori, this->wf_left, this->wf_front, this->wf_right) || is_updated;
     }
     if(is_updated){
@@ -637,6 +606,7 @@ public:
       if (map_next_id == -1) {
         if (this->solver_code == -2) {
           ROS_INFO("Robot stuck, recovery_mode triggered");
+          this->recovery_mode = true;
         } else {
           this->solver_code = this->map.solveNextStep(map_curr_id);
         }

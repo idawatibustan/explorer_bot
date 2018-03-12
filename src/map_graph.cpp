@@ -30,19 +30,16 @@ private:
   Position p_;
   double g_, h_, f_;
   bool calculated;
-  bool visited;
 public:
   Node(int id, int x, int y, const Position &goal) : p_(x, y) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
-    this->visited = false;
   }
   Node(int id, const Position &p, const Position &goal) : p_(p) {
     this->id_ = id;
     this->h_ = this->p_.getDistance(goal);
     this->calculated = false;
-    this->visited = false;
   }
   double getPosX() { return this->p_.getX(); }
   double getPosY() { return this->p_.getY(); }
@@ -63,15 +60,7 @@ public:
     this->g_ = g;
     this->calculated = false;
   }
-  bool is_visited() { return this->visited; }
-  void mark_visited() {
-    this->visited = true;
-  }
-  bool operator<(const Node &b) {
-    return this->f_ < b.f_;
-  }
 };
-
 
 class Graph{
 private:
@@ -86,8 +75,8 @@ public:
   bool doesEdgeExist(int a, int b){
     bool b_in_a = (std::find(adj[a].begin(), adj[a].end(), b) != adj[a].end());
     bool a_in_b = (std::find(adj[b].begin(), adj[b].end(), a) != adj[b].end());
-    std::cout << "check if exist b_in_a: " << b_in_a
-              << " a_in_b: " << a_in_b << std::endl;
+    // std::cout << "check if exist b_in_a: " << b_in_a
+    //           << " a_in_b: " << a_in_b << std::endl;
     return b_in_a && a_in_b;
   }
   void addEdge(int a, int b){
@@ -98,7 +87,6 @@ public:
     }
   }
   bool removeEdge(int a, int b){
-    std::cout << "removing " << a << "," << b << std::endl;
     if(doesEdgeExist(a, b)) {
       std::cout << "removing " << a << "," << b << std::endl;
       edge_count--;
@@ -138,9 +126,6 @@ private:
   std::vector<int> path;
 
   int* closed_nodes;
-  // int* open_nodes;
-  // std::priority_queue<Node> frontier;
-  // int fi;
 
 public:
   Map(int size, const Position &goal, const Position &init)
@@ -152,12 +137,8 @@ public:
     this->path.push_back(this->id_init);
     this->is_generated = false;
     this->closed_nodes = new int[size*size];
-    // this->open_nodes = new int[size*size];
-    // this->fi = 0;
-
     for(int i=0; i<size*size; i++) {
       this->closed_nodes[i] = 0;
-      // this->open_nodes[i] = 0;
     }
     print();
   }
@@ -170,12 +151,8 @@ public:
     this->path.push_back(this->id_init);
     this->is_generated = false;
     this->closed_nodes = new int[81];
-    // this->open_nodes = new int[81];
-    // this->fi = 0;
-
     for(int i=0; i<81; i++) {
       this->closed_nodes[i] = 0;
-      // this->open_nodes[i] = 0;
     }
     print();
   }
@@ -192,8 +169,9 @@ public:
     for(int i=0; i<this->size_; i++){
       for(int j=0; j<this->size_; j++){
         id = this->size_ * i + j;
-        // std::cout << "n:" << size << " id:" << id << " i:" << i << " j:" << j << std::endl;
         Node* n = new Node(id, i, j, this->goal_);
+        // std::cout << "n:" << this->size_ << " id:" << id << " i:" << i << " j:" << j
+        //           << " g=" << n->getH() << std::endl;
         nodes[id] = n;
         if (j > 0) {
           this->graph.addEdge(id-1, id);
@@ -216,7 +194,7 @@ public:
   std::map<int, Node*> getNodes() { return nodes; }
   Graph* getGraph() { return &graph; }
   void printAdj() { this->graph.printGraph(); }
-  void viewGraph() { 
+  void viewGraph() {
     for(int i=this->size_-1; i>=0; i--){
       for(int j=0; j<this->size_; j++){
         int id = this->size_ * i + j;
@@ -226,13 +204,22 @@ public:
           std::cout << '[' << std::setw(2) << id << "] ";
         }
       }
-      std::cout << std::endl;
-      std::cout << std::endl;
+      std::cout << std::endl << std::endl;
     }
+  }
+  int getNeighborId(int id, int direction) {
+    // dir: [0, 1, 2, 3] = [n, e, s, w]
+    switch(direction) {
+      case 0 : return id+this->size_;
+      case 1 : return id+1;
+      case 2 : return id-this->size_;
+      case 3 : return id-1;
+    }
+    return -1;
   }
   bool removeNorth(int id) {
     int id_north = id+this->size_;
-    std::cout << "remove north: [" << id << ", " << id_north << "]" << std::endl; 
+    std::cout << "remove north: [" << id << ", " << id_north << "]" << std::endl;
     if (id_north >= this->graph.getNodeCount()) {
       return false;
     }
@@ -240,7 +227,7 @@ public:
   }
   bool removeEast(int id) {
     int id_east = id+1;
-    std::cout << "remove east: [" << id << ", " << id_east << "]" << std::endl; 
+    std::cout << "remove east: [" << id << ", " << id_east << "]" << std::endl;
     if (id_east >= this->graph.getNodeCount()) {
       return false;
     }
@@ -248,7 +235,7 @@ public:
   }
   bool removeSouth(int id) {
     int id_south = id-this->size_;
-    std::cout << "remove south: [" << id << ", " << id_south << "]" << std::endl; 
+    std::cout << "remove south: [" << id << ", " << id_south << "]" << std::endl;
     if (id_south >= this->graph.getNodeCount()) {
       return false;
     }
@@ -256,11 +243,22 @@ public:
   }
   bool removeWest(int id) {
     int id_west = id-1;
-    std::cout << "remove west: [" << id << ", " << id_west << "]" << std::endl; 
+    std::cout << "remove west: [" << id << ", " << id_west << "]" << std::endl;
     if (id_west >= this->graph.getNodeCount()) {
       return false;
     }
     return this->graph.removeEdge(id, id_west);
+  }
+  void forceUpdateEdge(int id, int ori, bool wall_front) {
+    // ori: [0, 1, 2, 3] = [n, e, s, w]
+    std::cout << "FORCE UPDATE " << id << ">" << ori
+              << " front:" << wall_front << std::endl;
+    int id_neighbor = this->getNeighborId(id, ori);
+    if(wall_front) {
+      this->graph.removeEdge(id, id_neighbor);
+    } else {
+      this->graph.addEdge(id, id_neighbor);
+    }
   }
   bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
@@ -268,17 +266,11 @@ public:
               << " front:" << wall_front << std::endl;
     bool wall_change = false;
     if(wall_front) {
-      switch(ori) {
-        case 0 : wall_change = this->removeNorth(id); break;
-        case 1 : wall_change = this->removeEast(id); break;
-        case 2 : wall_change = this->removeSouth(id); break;
-        case 3 : wall_change = this->removeWest(id); break;
-      }
+      int id_neighbor = this->getNeighborId(id, ori);
+      wall_change = this->graph.removeEdge(id, id_neighbor);
     }
     if(wall_change) {
       std::cout << "updating edge, wall_changed" << std::endl;
-    } else {
-      std::cout << "no change" << std::endl;
     }
     return wall_change;
   }
@@ -312,13 +304,12 @@ public:
     }
     if(left_change || front_change || right_change){
       std::cout << "updating edge, wall_changed" << left_change << front_change << right_change << std::endl;
-    } else {
-      std::cout << "no change" << std::endl;
     }
     return left_change || front_change || right_change;
   }
   int solveNextStep(int n) {
     // get current node g(n) + 1 for next step
+    std::cout << "solving node: " << n << std::endl;
     double g_n = this->nodes[n]->getG() + 1;
     // initialize min value
     double min_f = 1000.0;
@@ -326,18 +317,23 @@ public:
 
     std::cout << std::setprecision(2) << std::fixed;
     // iterate through the node neighbors
-    for(int &i: this->graph.getEdges(id_curr)){
+    for(int &i: this->graph.getEdges(n)){
       Node* n_temp = this->nodes[i];
       // update actual cost g(n)
       n_temp->setG(g_n);
       std::cout << "  node[" << std::setw(2) << i
       << "] h=" << std::setw(5) << n_temp->getH()
-      << " f=" << std::setw(5) << n_temp->getF() << std::endl;
+      << " f=" << std::setw(5) << n_temp->getF()
+      << " c?" << closed_nodes[n_temp->getId()] << std::endl;
       // if lower than min, update min f(n) & index
       if(n_temp->getF() < min_f && closed_nodes[n_temp->getId()] == 0){
         min_f = n_temp->getF();
         n_min = n_temp;
       }
+    }
+    if (min_f == 1000.0 || n_min == NULL){
+      std::cout << "Next node not found!" << std::endl;
+      return -2;
     }
     std::cout << "* node[" << std::setw(2) << n_min->getId()
     << "] h(n)=" << std::setw(5) << n_min->getH()
@@ -345,6 +341,7 @@ public:
     << std::endl << std::endl;
     // return node index with the lowest f(n)
     this->closed_nodes[n_min->getId()] = 1;
+    this->path.push_back(n_min->getId());
     return n_min->getId();
   }
   void solveMap() {
@@ -355,6 +352,18 @@ public:
       // add next node to path
       path.push_back(this->id_curr);
     }
+  }
+  int peekNextPath(int n){
+    bool getNext = false;
+    for(int &j: this->path){
+      if(getNext == true){
+        return j;
+      }
+      if (j == n){
+        getNext = true;
+      }
+    }
+    return -1;
   }
 };
 
@@ -391,10 +400,19 @@ int main()
   m2.removeSouth(30);
   m2.removeNorth(22);
   // m2.removeWest(22);
-  // m2.updateEdge(20, 1, true);
+  m2.updateEdge(21, 0, true);
+  m2.updateEdge(21, 1, true);
+  m2.updateEdge(21, 2, true);
+  m2.updateEdge(21, 3, true);
   // m2.updateEdge(20, 1, true);
   m2.updateEdge(22, 0, true, true, false);
   // m2.printAdj();
+
+  std::cout << "checking neighbors code... " << std::endl;
+  std::cout << "north 10 -> " << m2.getNeighborId(10, 0)
+            << " east 10 -> " << m2.getNeighborId(10, 1)
+            << " south 10 -> " << m2.getNeighborId(10, 2)
+            << " west 10 -> " << m2.getNeighborId(10, 3) << std::endl;
 
   std::cout << "solving map..." << std::endl;
   m2.solveMap();
