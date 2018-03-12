@@ -580,24 +580,21 @@ public:
     // if robot is moving, don't perform any search algo
     if(this->is_moving)
       return;
-    if ( d_z < 0.04 ) {
-      if( this->init_count < 6){
-        switch (init_count) {
-          case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
-          case 1: this->init_count = (map_curr_ori == 1) ? 4 : 1; break;
-          case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
-          case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
-          case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4;
-                  break;
-          case 5: this->init_count++;
-                  this->init_completed = true;
-                  this->solver_code = this->map.solveNextStep(map_curr_id);
-                  ROS_INFO("trying to solve next");
-                  break;
-        }
+    // initialization
+    if ( d_z < 0.04 && this->init_count < 6) {
+      switch (init_count) {
+        case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
+        case 1: this->init_count = (map_curr_ori == 1) ? 4 : 1; break;
+        case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
+        case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
+        case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4; break;
+        case 5: this->init_count++;
+                this->init_completed = true;
+                this->solver_code = this->map.solveNextStep(map_curr_id);
+                ROS_INFO("trying to solve next");
+                break;
       }
     }
-
     int map_next_id = map_curr_id;
     if(this->init_completed == true) {
       map_next_id = this->map.peekNextPath(map_curr_id);
@@ -607,14 +604,17 @@ public:
         if (this->solver_code == -2) {
           ROS_INFO("Robot stuck, recovery_mode triggered");
           this->recovery_mode = true;
+          map_next_id = map_curr_id;
         } else {
           this->solver_code = this->map.solveNextStep(map_curr_id);
         }
       }
     }
+    // recovery mode
     if(this->recovery_mode){
-      if ( d_z < 0.04 ) {
-        if( this->recovery_count < 6){
+      std::cout << "recovery:" << recovery_count << std::endl;
+      if(this->recovery_count < 6){
+        if ( d_z < 0.04 ) {
           switch (recovery_count) {
             case 0: this->recovery_count = (map_curr_ori == 0) ? 1 : 0; break;
             case 1: this->recovery_count = (map_curr_ori == 1) ? 2 : 1; break;
@@ -622,12 +622,15 @@ public:
             case 3: this->recovery_count = (map_curr_ori == 3) ? 4 : 3; break;
             case 4: this->recovery_count = (map_curr_ori == 0) ? 5 : 4; break;
             case 5: this->recovery_count++;
-            ROS_INFO("Recovery done, what to do?");
+                    ROS_INFO("Recovery done, what to do?");
             break;
           }
         }
+      } else {
+        ROS_INFO("here now");
       }
-    } else if(map_curr_id != map_next_id){
+    } // normal mode
+    else if(map_curr_id != map_next_id){
       ROS_INFO("MOVE!!! %d -> %d", map_curr_id, map_next_id);
       int n = map_curr_id+this->map_size_;
       int e = map_curr_id+1;
