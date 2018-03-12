@@ -373,6 +373,9 @@ public:
     }
     return -1;
   }
+  Position getNodePosition(int n) {
+    return Position(this->nodes[n]->getPosX(), this->nodes[n]->getPosY());
+  }
   explorer_bot::MoveGoal getNodeGoal(int n) {
     explorer_bot::MoveGoal goal;
     goal.request.goal.x = this->nodes[n]->getPosX();
@@ -633,8 +636,11 @@ public:
         ROS_INFO("here now");
         if(this->solver_code == -2) {
           ROS_INFO("DeadEnd, reupdate map");
+          this->map = new Map(this->map_size_, Position(this->goal_x, this->goal_y), this->map->getNodePosition(map_curr_id));
         } else {
-          ROS_INFO("code: %d", this->solver_code);
+          ROS_INFO("Path found: %d. Exiting recovery mode", this->solver_code);
+          this->recovery_mode = false;
+          this->recovery_count = 0;
         }
       }
     } // normal mode
