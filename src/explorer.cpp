@@ -425,7 +425,10 @@ private:
   Map map;
 
 public:
-  Explorer(ros::NodeHandle &nh) : map() {
+  Explorer( ros::NodeHandle &nh, int size,
+    int goal_x, int goal_y,
+    int init_x, int init_y )
+  : map(size, Position(goal_x, goal_y), Position(init_x, init_y)) {
     this->init_completed = false;
     this->goal_reached = false;
     this->is_moving = false;
@@ -653,7 +656,14 @@ public:
 int main(int argc, char** argv){
   ros::init(argc, argv, "explorer");
   ros::NodeHandle nh;
-  Explorer ex(nh);
+  int size, goal_x, goal_y, init_x, init_y;
+  ros::param::param("~size", size, 9);
+  ros::param::param("~goal_x", goal_x, 4);
+  ros::param::param("~goal_y", goal_y, 4);
+  ros::param::param("~init_x", init_x, 0);
+  ros::param::param("~init_y", init_y, 0);
+
+  Explorer ex(nh, size, goal_x, goal_y, init_x, init_y);
 
   ros::Time begin = ros::Time::now();
   ros::Rate r(10);
@@ -664,7 +674,6 @@ int main(int argc, char** argv){
     if (!ex.is_goal_reached()) {
       ex.find_goal();
     } else {
-
       break;
     }
     ros::spinOnce();
