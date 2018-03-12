@@ -403,13 +403,13 @@ private:
   bool wall_front, wf_left, wf_front, wf_right;
 
   int map_size_;
-  Map map;
+  Map* map;
 
 public:
   Explorer( ros::NodeHandle &nh, int size,
     int goal_x, int goal_y,
     int init_x, int init_y )
-  : map(size, Position(goal_x, goal_y), Position(init_x, init_y)) {
+  {
     this->init_completed = false;
     this->goal_reached = false;
     this->is_moving = false;
@@ -417,16 +417,18 @@ public:
 
     this->init_count = 0;
     this->solver_code = 0;
-
-    map.generateGraph();
-    map.viewGraph();
-    map.printAdj();
+    this->recovery_count = 0;
 
     this->map_size_ = size;
     this->goal_x = goal_x;
     this->goal_y = goal_y;
     this->init_x = init_x;
     this->init_y = init_y;
+
+    this->map = new Map(size, Position(goal_x, goal_y), Position(init_x, init_y));
+    this->map->generateGraph();
+    this->map->viewGraph();
+    this->map->printAdj();
 
     this->wall_front = false;
     this->wf_left = false;
@@ -485,18 +487,18 @@ public:
 
   void update_wall(int map_curr_id, int ori) {
     bool is_updated = false;
-    is_updated = map.updateEdge(map_curr_id, ori, this->wall_front);
+    is_updated = this->map->updateEdge(map_curr_id, ori, this->wall_front);
     if(!this->wall_front){
       // get neighbor id, then update
-      int map_neighbor_id = map.getNeighborId(map_curr_id, ori);
-      is_updated = map.updateEdge(map_neighbor_id, ori, this->wf_left, this->wf_front, this->wf_right) || is_updated;
+      int map_neighbor_id = this->map->getNeighborId(map_curr_id, ori);
+      is_updated = this->map->updateEdge(map_neighbor_id, ori, this->wf_left, this->wf_front, this->wf_right) || is_updated;
     }
     if(is_updated){
-      this->map.printAdj();
+      this->map->printAdj();
     }
   }
   void force_update_wall(int map_curr_id, int ori) {
-    this->map.forceUpdateEdge(map_curr_id, ori, this->wall_front);
+    this->map->forceUpdateEdge(map_curr_id, ori, this->wall_front);
   }
   void init_search() {
     if(this->is_moving)
@@ -590,14 +592,14 @@ public:
         case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4; break;
         case 5: this->init_count++;
                 this->init_completed = true;
-                this->solver_code = this->map.solveNextStep(map_curr_id);
+                this->solver_code = this->map->solveNextStep(map_curr_id);
                 ROS_INFO("trying to solve next");
                 break;
       }
     }
     int map_next_id = map_curr_id;
     if(this->init_completed == true) {
-      map_next_id = this->map.peekNextPath(map_curr_id);
+      map_next_id = this->map->peekNextPath(map_curr_id);
       std::cout << "next = " << map_next_id
                 << " curr = " << map_curr_id << std::endl;
       if (map_next_id == -1) {
@@ -606,7 +608,7 @@ public:
           this->recovery_mode = true;
           map_next_id = map_curr_id;
         } else {
-          this->solver_code = this->map.solveNextStep(map_curr_id);
+          this->solver_code = this->map->solveNextStep(map_curr_id);
         }
       }
     }
@@ -622,12 +624,18 @@ public:
             case 3: this->recovery_count = (map_curr_ori == 3) ? 4 : 3; break;
             case 4: this->recovery_count = (map_curr_ori == 0) ? 5 : 4; break;
             case 5: this->recovery_count++;
-                    ROS_INFO("Recovery done, what to do?");
+                    this->solver_code = this->map->solveNextStep(map_curr_id);
+                    ROS_INFO("Recovery done, trying to solve again: %d", this->solver_code);
             break;
           }
         }
       } else {
         ROS_INFO("here now");
+        if(this->solver_code == -2) {
+          ROS_INFO("DeadEnd, reupdate map");
+        } else {
+          ROS_INFO("code: %d", this->solver_code);
+        }
       }
     } // normal mode
     else if(map_curr_id != map_next_id){
@@ -636,7 +644,7 @@ public:
       int e = map_curr_id+1;
       int s = map_curr_id-this->map_size_;
       int w = map_curr_id-1;
-      this->goal = this->map.getNodeGoal(map_curr_id);
+      this->goal = this->map->getNodeGoal(map_curr_id);
       if(!this->is_moving) {
         ROS_INFO("send");
         if(map_next_id == n) {
@@ -657,8 +665,8 @@ public:
     return;
   }
   void close() {
-    // this->map.printAdj();
-    this->map.viewGraph();
+    this->map->printAdj();
+    this->map->viewGraph();
   }
 };
 
