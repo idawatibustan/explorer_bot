@@ -215,7 +215,7 @@ public:
   std::map<int, Node*> getNodes() { return nodes; }
   Graph* getGraph() { return &graph; }
   void printAdj() { this->graph.printGraph(); }
-  void viewGraph() { 
+  void viewGraph() {
     for(int i=this->size_-1; i>=0; i--){
       for(int j=0; j<this->size_; j++){
         int id = this->size_ * i + j;
@@ -231,7 +231,7 @@ public:
   }
   bool removeNorth(int id) {
     int id_north = id+this->size_;
-    std::cout << "remove north: [" << id << ", " << id_north << "]" << std::endl; 
+    std::cout << "remove north: [" << id << ", " << id_north << "]" << std::endl;
     if (id_north >= this->graph.getNodeCount()) {
       return false;
     }
@@ -239,7 +239,7 @@ public:
   }
   bool removeEast(int id) {
     int id_east = id+1;
-    std::cout << "remove east: [" << id << ", " << id_east << "]" << std::endl; 
+    std::cout << "remove east: [" << id << ", " << id_east << "]" << std::endl;
     if (id_east >= this->graph.getNodeCount()) {
       return false;
     }
@@ -247,7 +247,7 @@ public:
   }
   bool removeSouth(int id) {
     int id_south = id-this->size_;
-    std::cout << "remove south: [" << id << ", " << id_south << "]" << std::endl; 
+    std::cout << "remove south: [" << id << ", " << id_south << "]" << std::endl;
     if (id_south >= this->graph.getNodeCount()) {
       return false;
     }
@@ -255,7 +255,7 @@ public:
   }
   bool removeWest(int id) {
     int id_west = id-1;
-    std::cout << "remove west: [" << id << ", " << id_west << "]" << std::endl; 
+    std::cout << "remove west: [" << id << ", " << id_west << "]" << std::endl;
     if (id_west >= this->graph.getNodeCount()) {
       return false;
     }
@@ -360,8 +360,9 @@ public:
         n_min = n_temp;
       }
     }
-    if (min_f = 1000.0 || n_min = NULL){
-      return -1;
+    if (min_f == 1000.0 || n_min == NULL){
+      ROS_INFO("Next node not found!");
+      return -2;
     }
     std::cout << "* node[" << std::setw(2) << n_min->getId()
     << "] h(n)=" << std::setw(5) << n_min->getH()
@@ -416,7 +417,7 @@ private:
   double goal_x, goal_y;
   double d_x, d_y;
 
-  int init_count, solver_code;
+  int init_count, solver_code, recovery_count;
   bool init_completed, goal_reached;
   bool is_moving, recovery_mode;
   bool wall_front, wf_left, wf_front, wf_right;
@@ -503,6 +504,7 @@ public:
   }
   bool is_init_completed() { return this->init_completed; }
   bool is_goal_reached() { return this->goal_reached; }
+  bool in_recovery_mode() { return this->recovery_mode; }
   void update_wall(int map_curr_id, int ori) {
     bool is_updated = false;
     is_updated = map.updateEdge(map_curr_id, ori, this->wall_front);
@@ -552,6 +554,27 @@ public:
     // if(west exists) turn west, updateWall;
     */
   }
+  void do_recovery() {
+    if(this->is_moving)
+      return;
+    switch(recovery_count){
+      case 0: ROS_INFO("Updating North wall");
+              this->turn_north.call(esrv);
+              break;
+      case 1: ROS_INFO("Updating East wall");
+              this->turn_east.call(esrv);
+              break;
+      case 2: ROS_INFO("Updating South wall");
+              this->turn_south.call(esrv);
+              break;
+      case 3: ROS_INFO("Updating West wall");
+              this->turn_west.call(esrv);
+              break;
+      case 4: ROS_INFO("Exit recovery: Deadend?");
+              this->turn_north.call(esrv);
+              break;
+    }
+  }
   void find_goal() {
     int x = round(pos_x);
     int y = round(pos_y);
@@ -585,7 +608,7 @@ public:
     // if robot is moving, don't perform any search algo
     if(this->is_moving)
       return;
-    if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
+    if ( d_z < 0.04 ) {
       if( this->init_count < 6){
         switch (init_count) {
           case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
@@ -610,7 +633,7 @@ public:
                 << " curr = " << map_curr_id << std::endl;
       if (map_next_id == -1) {
         if (this->solver_code == -2) {
-          ROS_INFO("Robot stuck, recovery_mode triggered")
+          ROS_INFO("Robot stuck, recovery_mode triggered");
         } else {
           this->solver_code = this->map.solveNextStep(map_curr_id);
         }
@@ -641,10 +664,22 @@ public:
       ROS_INFO("chillin!!! %d -> %d", map_curr_id, map_next_id);
     }
     if(this->recovery_mode){
-      ROS_INFO("Do something");
-      this->force_update_wall()
+      if ( d_z < 0.04 ) {
+        if( this->recovery_count < 6){
+          switch (recovery_count) {
+            case 0: this->recovery_count = (map_curr_ori == 0) ? 1 : 0; break;
+            case 1: this->recovery_count = (map_curr_ori == 1) ? 2 : 1; break;
+            case 2: this->recovery_count = (map_curr_ori == 2) ? 3 : 2; break;
+            case 3: this->recovery_count = (map_curr_ori == 3) ? 4 : 3; break;
+            case 4: this->recovery_count = (map_curr_ori == 0) ? 5 : 4;
+                    break;
+            case 5: this->recovery_count++;
+                    ROS_INFO("Recovery done, what to do?");
+                    break;
+          }
+        }
+      }
     }
-
     return;
   }
   void close() {
@@ -673,6 +708,9 @@ int main(int argc, char** argv){
     }
     if (!ex.is_goal_reached()) {
       ex.find_goal();
+      if (ex.in_recovery_mode()) {
+        ex.do_recovery();
+      }
     } else {
       break;
     }
