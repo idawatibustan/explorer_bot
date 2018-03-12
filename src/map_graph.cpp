@@ -153,7 +153,7 @@ public:
     this->is_generated = false;
     this->closed_nodes = new int[size*size];
     // this->open_nodes = new int[size*size];
-    this->fi = 0;
+    // this->fi = 0;
 
     for(int i=0; i<size*size; i++) {
       this->closed_nodes[i] = 0;
@@ -171,7 +171,7 @@ public:
     this->is_generated = false;
     this->closed_nodes = new int[81];
     // this->open_nodes = new int[81];
-    this->fi = 0;
+    // this->fi = 0;
 
     for(int i=0; i<81; i++) {
       this->closed_nodes[i] = 0;
@@ -371,7 +371,8 @@ int main()
   // Map m1;
 
   std::cout << "testing graph m2..." << std::endl;
-  Map m2(9, goal, start);
+  // Map m2(9, goal, start);
+  Map m2(9, Position(4,4), Position(0,0));
   std::cout << "generating graph..." << std::endl;
   m2.generateGraph();
   std::cout << "printing graph..." << std::endl;
