@@ -43,6 +43,7 @@ private:
   double target_x, target_y, target_z;
   double roll, pitch, yaw;
   double dx, dy, dt;
+  double d_x, d_y;
 
 public:
   BotNavigator(ros::NodeHandle &nh){
@@ -100,32 +101,56 @@ public:
   bool move_north_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_north");
-    target_z = 0.00;
     target_x = req.goal.x + 1.0;
+    target_y = req.goal.y;
+
+    d_x = target_x - pos_x;
+    d_y = target_y - pos_y;
+
+    target_z = 0.00 + std::atan2(d_y, d_x);
+
     turn = 1;
     move_n = 1;
   }
   bool move_south_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_south");
-    target_z = M_PI;
     target_x = req.goal.x - 1.0;
+    target_y = req.goal.y;
+
+    d_x = target_x - pos_x;
+    d_y = target_y - pos_y;
+
+    target_z = M_PI + std::atan2(d_y, -d_x);
+
     turn = 1;
     move_s = 1;
   }
   bool move_east_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_east");
-    target_z = 1.5 * M_PI;
+    target_x = req.goal.x;
     target_y = req.goal.y - 1.0;
+
+    d_x = target_x - pos_x;
+    d_y = target_y - pos_y;
+
+    target_z = 1.5 * M_PI + std::atan2(d_x, -d_y);
+
     turn = 1;
     move_e = 1;
   }
   bool move_west_callback( explorer_bot::MoveGoal::Request& req, explorer_bot::MoveGoal::Response& res )
   {
     ROS_INFO("requested move_west");
-    target_z = 0.5 * M_PI;
+    target_x = req.goal.x;
     target_y = req.goal.y + 1.0;
+
+    d_x = target_x - pos_x;
+    d_y = target_y - pos_y;
+
+    target_z = 0.5 * M_PI + std::atan2(d_x, d_y);
+
     turn = 1;
     move_w = 1;
   }
@@ -184,6 +209,7 @@ public:
         }
         else{
           // target distance reached, stop movement, set flags to false
+          target_z = 0.00;
           trans_x = 0;
           move_n = 0;
           is_moving = false;
@@ -204,6 +230,7 @@ public:
           printf("Moving, pos_x= %f, target_x= %f \n", pos_x, target_x);
         }
         else{
+          target_z = M_PI;
           trans_x = 0;
           move_s = 0;
           is_moving = false;
@@ -224,6 +251,7 @@ public:
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
         else{
+          target_z = 1.5 * M_PI;
           trans_x = 0;
           move_e = 0;
           is_moving = false;
@@ -244,6 +272,7 @@ public:
           printf("Moving, pos_y= %f, target_y= %f \n", pos_y, target_y);
         }
         else{
+          target_z = 0.5 * M_PI;
           trans_x = 0;
           move_w = 0;
           is_moving = false;
