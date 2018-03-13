@@ -121,7 +121,7 @@ public:
     d_x = target_x - pos_x;
     d_y = target_y - pos_y;
 
-    target_z = M_PI + std::atan2(d_y, -d_x);
+    target_z = M_PI + std::atan2(-d_y, -d_x);
 
     turn = 1;
     move_s = 1;
@@ -149,7 +149,7 @@ public:
     d_x = target_x - pos_x;
     d_y = target_y - pos_y;
 
-    target_z = 0.5 * M_PI + std::atan2(d_x, d_y);
+    target_z = 0.5 * M_PI + std::atan2(-d_x, d_y);
 
     turn = 1;
     move_w = 1;
