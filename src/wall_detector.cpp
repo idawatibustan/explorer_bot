@@ -62,21 +62,25 @@ class WallDetector{
               // }
             }
             // perception logic of the walls V2
-            double right_outer = scan[1];
-            double right_inner = scan[2];
+            double right_outer = scan[2];
+            double right_inner = scan[3];
 
             double front_r = scan[6];
             double front_f = scan[7];
             double front_l = scan[8];
 
-            double left_outer = scan[13];
-            double left_inner = scan[12];
+            double left_inner = scan[13];
+            double left_outer = scan[14];
 
             double lim_inner = 1.5;
-            double lim_outer = 1.2;
+            double lim_outer = 1.3;
+            double lim_front = 0.6;
+            double lim_2front = 1.6;
 
             // direct front wall
-            if ((front_r < 0.6 && front_f < 0.6 && front_l < 0.6) || (front_r == 0 && front_f == 0 && front_l == 0 && left_inner < 0.65 && right_inner < 0.65))
+            if ((front_r < lim_front && front_f < lim_front && front_l < lim_front) ||
+                (front_r == 0 && front_f == 0 && front_l == 0 &&
+                 left_inner < 0.65 && right_inner < 0.65))
             {
               front_0 = true;
               wall_state.data = "1000";
@@ -119,7 +123,7 @@ class WallDetector{
                       << " ff:" << std::setw(4) << front_f
                       << " fr:" << std::setw(4) << front_r
                       << " ri:" << std::setw(4) << right_inner
-                      <<  "ro:" << std::setw(4) << right_outer
+                      << " ro:" << std::setw(4) << right_outer
                       << std::endl;
             /*
             for ( int i=j; i<j+n; i++ )
