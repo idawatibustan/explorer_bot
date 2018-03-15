@@ -276,8 +276,8 @@ public:
   bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
     bool wall_change = false;
+    int id_neighbor = this->getNeighborId(id, ori);
     if(wall_front) {
-      int id_neighbor = this->getNeighborId(id, ori);
       wall_change = this->graph.removeEdge(id, id_neighbor);
     }
     if(wall_change) {
@@ -489,7 +489,7 @@ public:
   bool in_recovery_mode() { return this->recovery_mode; }
 
   void update_wall(int map_curr_id, int ori) {
-    this->map->updateEdge(map_curr_id, ori, this->wall_front);
+    this->map->forceUpdateEdge(map_curr_id, ori, this->wall_front);
     if(!this->wall_front){
       // get neighbor id, then update the neighbor's edges
       int map_neighbor_id = this->map->getNeighborId(map_curr_id, ori);
@@ -555,6 +555,7 @@ public:
 
     // when robot is in the center of the grid, update wall (remove only)
     if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
+      // this->force_update_wall(map_curr_id, map_curr_ori);
       if(this->recovery_mode){
         this->force_update_wall(map_curr_id, map_curr_ori);
       } else {
