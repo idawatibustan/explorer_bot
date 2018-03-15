@@ -22,13 +22,8 @@ class WallDetector{
             bool left_1 = false;
             bool front_1 = false;
             bool right_1 = false;
-            double r5 = 0, r4 = 0, r3 = 0, r2 = 0;
-            double fr = 0, fl = 0;
-            double l2 = 0, l3 = 0, l4 = 0, l5 = 0, l6 = 0;
 
             std::vector<float> ranges = scanMsg->ranges;
-            double range_min = scanMsg->range_min;
-            double range_max = scanMsg->range_max;
 
             int j=0, temp_c=0, n=42;
 
@@ -40,8 +35,6 @@ class WallDetector{
             int count[r_wd] = {0};
 
             for (int i=0; i< r_len; i++) {
-              // std::cout << "[" << std::setw(2) << i/n
-              //           << "] " << i << std::endl;
               if(!std::isnan(ranges[i]) ) {
                 j = i/n;
                 temp_c = count[j];
@@ -54,12 +47,6 @@ class WallDetector{
               std::cout << std::setw(2) << i
                         << "," << count[i]
                         << "," << std::setw(4) << scan[i] << std::endl;
-              // if(i == cen || i == cen-1 ){
-              //   std::cout << " * " << std::endl;
-              // }
-              // else {
-              //   std::cout << std::endl;
-              // }
             }
             // perception logic of the walls V2
             double right_outer = scan[2];
@@ -125,165 +112,12 @@ class WallDetector{
                       << " ri:" << std::setw(4) << right_inner
                       << " ro:" << std::setw(4) << right_outer
                       << std::endl;
-            /*
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                r5 = r5 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                r4 = r4 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                r3 = r3 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                r2 = r2 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                fr = fr * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                fl = fl * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                l2 = l2 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                l3 = l3 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                l4 = l4 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<j+n; i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                l5 = l5 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
-            j+=n;
-            count=0;
-            for ( int i=j; i<ranges.size(); i++ )
-            {
-              if(!std::isnan(ranges[i])) {
-                l6 = l6 * count/(count+1) + ranges[i]/(count+1);
-                count++;
-              }
-            }
 
-            if ((fl < 0.65 && fr < 0.65) || (fl == 0 && fr == 0 && l5 < 0.65 && r5 < 0.65))
-            {
-              front_0 = true;
-              wall_state.data = "1000";
-            }
-            else
-            {
-              std::string wall ("0");
-              if ( l4 < 1.2 && l3 < 1.4 && l4 < l3 && l4 != 0 && l3 != 0 ) {
-                left_1 = true;
-                wall += "1";
-              } else {
-                wall += "0";
-              }
-              if ( fl < 1.6 && fr < 1.6 && fl != 0 && fr != 0) {
-                front_1 = true;
-                wall += "1";
-              } else {
-                wall += "0";
-              }
-              if ( r4 < 1.2 && r3 < 1.4 && r4 < r3 && r4 != 0 && r3 != 0 ) {
-                right_1 = true;
-                wall += "1";
-              } else {
-                wall += "0";
-              }
-              wall_state.data = wall;
-            }
-
-            */
             wall_pub.publish(wall_state);
-            /*
-            std::cout << std::setprecision(2) << std::fixed;
-            std::cout << " l6:" << l6
-                      << " l:" << l5
-                      << " l4:" << l4
-                      << " l:" << l3
-                      << " l2:" << l2
-                      << " fl:" << fl
-                      << " fr:" << fr
-                      << " r2:" << r2
-                      << " r:" << r3
-                      << " r4:" << r4
-                      << " r:" << r5
-                      << std::endl;
-            */
             std::cout << "front:" << front_0
                       << " left:" << left_1
                       << " frnt:" << front_1
                       << " rght:" << right_1 << std::endl;
-        }
-        double average( std::vector<float>& v )
-        {
-            double sum = 0.0;
-            int n = v.size();
-            for ( int i=0; i<n; i++ )
-            {
-                sum += v[i];
-            }
-            return ( sum / n );
         }
 };
 
