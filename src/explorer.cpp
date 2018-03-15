@@ -555,7 +555,6 @@ public:
 
     // when robot is in the center of the grid, update wall (remove only)
     if ( std::abs(pos_x - x) < 0.1 && std::abs(pos_y - y) < 0.1 && d_z < 0.04 ) {
-      // this->force_update_wall(map_curr_id, map_curr_ori);
       if(this->recovery_mode){
         this->force_update_wall(map_curr_id, map_curr_ori);
       } else {
