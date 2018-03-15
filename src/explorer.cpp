@@ -276,8 +276,8 @@ public:
   bool updateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
     bool wall_change = false;
-    int id_neighbor = this->getNeighborId(id, ori);
     if(wall_front) {
+      int id_neighbor = this->getNeighborId(id, ori);
       wall_change = this->graph.removeEdge(id, id_neighbor);
     }
     if(wall_change) {
@@ -287,35 +287,33 @@ public:
   }
   bool updateEdge(int id, int ori, bool wall_left, bool wall_front, bool wall_right){
     bool left_change=false, front_change=false, right_change=false;
-    int temp_ori = ori;
-
-    // wall front
-    int id_n = this->getNeighborId(id, ori);
+    if(wall_left) {
+      switch(ori) {
+        case 0 : left_change = this->removeWest(id); break;
+        case 1 : left_change = this->removeNorth(id); break;
+        case 2 : left_change = this->removeEast(id); break;
+        case 3 : left_change = this->removeSouth(id); break;
+      }
+    }
     if(wall_front) {
-      front_change = this->graph.removeEdge(id, id_n);
+      switch(ori) {
+        case 0 : front_change = this->removeNorth(id); break;
+        case 1 : front_change = this->removeEast(id); break;
+        case 2 : front_change = this->removeSouth(id); break;
+        case 3 : front_change = this->removeWest(id); break;
+      }
     }
-
-    // 0 -> 3 , 1-> 0, 2-> 1, 3-> 2
-    temp_ori = ori-1;
-    if (temp_ori < 0)
-      temp_ori = 3;
-    id_n = this->getNeighborId(id, ori);
-      if(wall_left) {
-      left_change = this->graph.removeEdge(id, id_n);
-    }
-
-    // 0 -> 1 , 1-> 2, 2-> 3, 3-> 0
-    temp_ori = ori+1;
-    if (temp_ori > 3)
-      temp_ori = 0;
-    id_n = this->getNeighborId(id, ori);
     if(wall_right) {
-      right_change = this->graph.removeEdge(id, id_n);
+      switch(ori) {
+        case 0 : right_change = this->removeEast(id); break;
+        case 1 : right_change = this->removeSouth(id); break;
+        case 2 : right_change = this->removeWest(id); break;
+        case 3 : right_change = this->removeNorth(id); break;
+      }
     }
-
-    // if(left_change || front_change || right_change){
-    //   // std::cout << "Updating edge, wall_changed(l,f,w):(" << left_change << front_change << right_change << std::endl;
-    // }
+    if(left_change || front_change || right_change){
+      // std::cout << "Updating edge, wall_changed(l,f,w):(" << left_change << front_change << right_change << std::endl;
+    }
     return left_change || front_change || right_change;
   }
   int solveNextStep(int n) {
