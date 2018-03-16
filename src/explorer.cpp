@@ -89,6 +89,7 @@ public:
   }
   void addEdge(int a, int b){
     if(!doesEdgeExist(a, b)) {
+      std::cout << "Adding " << a << "," << b << std::endl;
       edge_count++;
       adj[a].push_back(b);
       adj[b].push_back(a);
@@ -96,7 +97,7 @@ public:
   }
   bool removeEdge(int a, int b){
     if(doesEdgeExist(a, b)) {
-      std::cout << "removing " << a << "," << b << std::endl;
+      std::cout << "Removing " << a << "," << b << std::endl;
       edge_count--;
       adj[a].erase(std::remove(adj[a].begin(), adj[a].end(), b), adj[a].end());
       adj[b].erase(std::remove(adj[b].begin(), adj[b].end(), a), adj[b].end());
@@ -264,9 +265,12 @@ public:
   }
   void forceUpdateEdge(int id, int ori, bool wall_front) {
     // ori: [0, 1, 2, 3] = [n, e, s, w]
-    std::cout << "FORCE UPDATE " << id << ">" << ori
-              << " front:" << wall_front << std::endl;
+    // std::cout << "update" << id << " > " << ori
+    //           << " front:" << wall_front << std::endl;
     int id_neighbor = this->getNeighborId(id, ori);
+    if(id_neighbor < 0 || id_neighbor >= this->size_*this->size_){
+      return;
+    }
     if(wall_front) {
       this->graph.removeEdge(id, id_neighbor);
     } else {
@@ -277,6 +281,9 @@ public:
     // ori: [0, 1, 2, 3] = [n, e, s, w]
     bool wall_change = false;
     int id_neighbor = this->getNeighborId(id, ori);
+    if(id_neighbor < 0 || id_neighbor >= this->size_*this->size_){
+      return false;
+    }
     if(wall_front) {
       wall_change = this->graph.removeEdge(id, id_neighbor);
     }
@@ -402,7 +409,7 @@ private:
   double d_x, d_y;
 
   int init_count, solver_code, recovery_count;
-  bool init_completed, goal_reached;
+  bool is_start, init_completed, goal_reached;
   bool is_moving, recovery_mode;
   bool wall_front, wf_left, wf_front, wf_right;
 
@@ -418,6 +425,7 @@ public:
     this->goal_reached = false;
     this->is_moving = false;
     this->recovery_mode = false;
+    this->is_start = true;
 
     this->init_count = 0;
     this->solver_code = 0;
@@ -504,16 +512,16 @@ public:
       return;
     // when not moving, turn the robot 360
     switch(init_count){
-      case 0: ROS_INFO("Updating North wall");
+      case 0: ROS_INFO("Checking North wall");
               this->turn_north.call(esrv);
               break;
-      case 1: ROS_INFO("Updating East wall");
+      case 1: ROS_INFO("Checking East wall");
               this->turn_east.call(esrv);
               break;
-      case 2: ROS_INFO("Updating South wall");
+      case 2: ROS_INFO("Checking South wall");
               this->turn_south.call(esrv);
               break;
-      case 3: ROS_INFO("Updating West wall");
+      case 3: ROS_INFO("Checking West wall");
               this->turn_west.call(esrv);
               break;
       case 4: ROS_INFO("Back to initial state");
@@ -566,19 +574,36 @@ public:
       return;
     // initialization mode, scan the initial surrounding
     if ( d_z < 0.04 && this->init_count < 6) {
-      switch (init_count) { // move on to next when facing intended orientation
-        case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
-        case 1: this->init_count = (map_curr_ori == 1) ? 4 : 1; break;
-                // skip turn west and south
-                // to unskip, change 4 to 2 on line above
-        case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
-        case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
-        case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4; break;
-        case 5: this->init_count++; // break the loop, start searching
-                this->init_completed = true;
-                ROS_INFO("Initialization completed, start searching");
-                this->solver_code = this->map->solveNextStep(map_curr_id);
-                break;
+      if (this->is_start) { // differing decision on first or subsequent initialization
+        switch (init_count) { // move on to next when facing intended orientation
+          case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
+          case 1: this->init_count = (map_curr_ori == 1) ? 4 : 1;
+                  this->is_start = false;
+                  break;
+                  // skip turn west and south
+                  // to unskip, change 4 to 2 on line above
+          case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
+          case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
+          case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4; break;
+          case 5: this->init_count++; // break the loop, start searching
+                  this->init_completed = true;
+                  ROS_INFO("Initialization completed, start searching");
+                  this->solver_code = this->map->solveNextStep(map_curr_id);
+                  break;
+        }
+      } else {
+        switch (init_count) {
+          case 0: this->init_count = (map_curr_ori == 0) ? 1 : 0; break;
+          case 1: this->init_count = (map_curr_ori == 1) ? 2 : 1; break;
+          case 2: this->init_count = (map_curr_ori == 2) ? 3 : 2; break;
+          case 3: this->init_count = (map_curr_ori == 3) ? 4 : 3; break;
+          case 4: this->init_count = (map_curr_ori == 0) ? 5 : 4; break;
+          case 5: this->init_count++; // break the loop, start searching
+                  this->init_completed = true;
+                  ROS_INFO("Initialization completed, start searching");
+                  this->solver_code = this->map->solveNextStep(map_curr_id);
+                  break;
+        }
       }
     }
     // set map_next_id based on next id in this->path in map
